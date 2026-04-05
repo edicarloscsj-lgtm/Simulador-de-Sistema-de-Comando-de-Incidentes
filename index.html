@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICS Pro - Simulador de Comando de Incidentes</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { mono: ['JetBrains Mono', 'monospace'], sans: ['Inter', 'sans-serif'], },
+                    colors: {
+                        ics: { red: '#dc2626', orange: '#ea580c', amber: '#d97706', blue: '#2563eb', dark: '#0f172a', panel: '#1e293b' }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'flash': 'flash 1s ease-in-out infinite',
+                        'slide-in': 'slideIn 0.3s ease-out',
+                    },
+                    keyframes: {
+                        flash: { '0%, 100%': { opacity: '1' }, '50%': { opacity: '0.3' } },
+                        slideIn: { '0%': { transform: 'translateX(100%)', opacity: '0' }, '100%': { transform: 'translateX(0)', opacity: '1' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0a0a0a; color: #e2e8f0; }
+        
+        /* Ajustes base para o mapa Leaflet não quebrar o layout flex */
+        #map { width: 100%; height: 100%; z-index: 10; position: absolute; inset: 0; background-color: #1e293b; }
+        .leaflet-container { font-family: 'Inter', sans-serif; }
+        
+        /* Custom Leaflet Marker Styles for SCI */
+        .sci-marker { display: flex; align-items: center; justify-content: center; font-weight: bold; color: black; border: 2px solid #000; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); cursor: grab; }
+        .sci-marker:active { cursor: grabbing; }
+        .sci-pc { background-color: #ea580c; width: 40px; height: 30px; }
+        .sci-e { background-color: #d97706; width: 35px; height: 35px; border-radius: 50%; }
+        .sci-h { background-color: #2563eb; width: 35px; height: 35px; border-radius: 50%; color: white;}
+        .sci-resource { background-color: #dc2626; width: 30px; height: 30px; border-radius: 5px; color: white;}
+        .sci-water { background-color: #06b6d4; width: 30px; height: 30px; border-radius: 5px; color: white;}
+
+        /* Map Effects */
+        @keyframes floatSmoke { 0% { transform: translateY(0) scale(1); opacity: 0.8; } 100% { transform: translateY(-40px) scale(1.5); opacity: 0.1; } }
+        .animate-smoke { animation: floatSmoke 3s infinite alternate; filter: drop-shadow(0 0 10px rgba(50,50,50,0.8)); }
+        .smoke-wrapper { transition: transform 1s ease-in-out; display: flex; justify-content: center; align-items: flex-end; width: 100%; height: 100%; }
+
+        @keyframes blowWind { from { background-position: 0 400px; } to { background-position: 0 0; } }
+        .wind-visual-layer {
+            position: absolute; top: -100%; left: -100%; width: 300%; height: 300%; pointer-events: none; transition: transform 1s ease-in-out, opacity 0.5s; z-index: 20;
+            background-image: url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='rgba(56, 189, 248, 0.25)' stroke-linecap='round'%3E%3Cpath d='M50 400 L50 250' stroke-width='2'/%3E%3Cpath d='M150 200 L150 50' stroke-width='1.5'/%3E%3Cpath d='M280 350 L280 150' stroke-width='3'/%3E%3Cpath d='M350 150 L350 20' stroke-width='2'/%3E%3Cpath d='M100 100 L100 0' stroke-width='1'/%3E%3Cpath d='M300 100 L300 0' stroke-width='1'/%3E%3C/g%3E%3C/svg%3E");
+            animation: blowWind 1.5s linear infinite; opacity: 0;
+        }
+        .wind-active { opacity: 1; }
+
+        /* AI Chatbot */
+        .ai-chat-open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+        .ai-chat-closed { transform: translateY(20px); opacity: 0; pointer-events: none; }
+        .msg-user { background-color: #2563eb; color: white; align-self: flex-end; border-radius: 12px 12px 0 12px; }
+        .msg-ai { background-color: #374151; color: #e5e7eb; align-self: flex-start; border-radius: 12px 12px 12px 0; }
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+        /* UI Helpers */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .chat-message { animation: slideIn 0.2s ease-out; }
+        .status-dot { box-shadow: 0 0 10px currentColor; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden font-sans flex flex-col relative">
+
+    <!-- Tela de Login/Seleção de Modo -->
+    <div id="loginScreen" class="fixed inset-0 z-[5000] flex items-center justify-center bg-ics-dark">
+        <div class="w-full max-w-4xl p-8">
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center justify-center w-20 h-20 mb-6 bg-ics-red rounded-full animate-pulse-slow">
+                    <i class="fas fa-exclamation-triangle text-4xl text-white"></i>
+                </div>
+                <h1 class="text-5xl font-bold text-white mb-2">ICS PRO</h1>
+                <p class="text-gray-400 text-xl">Sistema de Comando de Incidentes</p>
+                <div class="mt-4 text-ics-amber font-mono text-sm">SIMULADOR TÁTICO HÍBRIDO (MAPA + C4I)</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button onclick="enterMode('instructor')" class="group relative p-8 bg-ics-panel rounded-xl border-2 border-gray-700 hover:border-ics-blue transition-all hover:scale-105 text-left">
+                    <div class="absolute top-4 right-4 text-ics-blue opacity-50 group-hover:opacity-100">
+                        <i class="fas fa-shield-alt text-3xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-2">Modo Instrutor</h3>
+                    <p class="text-gray-400">Controle o mapa, insira fogos, vazamentos, e injete desafios na simulação.</p>
+                    <div class="mt-4 flex items-center text-ics-blue">
+                        <i class="fas fa-lock mr-2"></i><span class="text-sm">Acesso restrito (Criar Sala)</span>
+                    </div>
+                </button>
+
+                <div class="flex flex-col relative">
+                    <div id="studentBtnGroup" class="h-full">
+                        <button onclick="enterMode('student_prompt')" class="w-full h-full group relative p-8 bg-ics-panel rounded-xl border-2 border-gray-700 hover:border-ics-amber transition-all hover:scale-105 text-left">
+                            <div class="absolute top-4 right-4 text-ics-amber opacity-50 group-hover:opacity-100">
+                                <i class="fas fa-user-graduate text-3xl"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-2">Modo Aluno</h3>
+                            <p class="text-gray-400">Participe como comandante, estabeleça zonas de risco no mapa e controle viaturas.</p>
+                            <div class="mt-4 flex items-center text-ics-amber">
+                                <i class="fas fa-users mr-2"></i><span class="text-sm">Acessar Sala (Código)</span>
+                            </div>
+                        </button>
+                    </div>
+                    
+                    <div id="studentJoinDiv" class="hidden absolute inset-0 bg-ics-panel rounded-xl border-2 border-ics-amber p-6 flex flex-col justify-center z-10 shadow-2xl">
+                        <h3 class="text-xl font-bold text-white mb-4 text-center"><i class="fa-solid fa-right-to-bracket mr-2 text-ics-amber"></i>Acessar Simulação</h3>
+                        <label class="text-xs text-gray-400 uppercase mb-2 block text-center">Digite o Código da Sala (Fornecido pelo Instrutor)</label>
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="roomCodeInput" placeholder="Ex: X7B9A2" class="w-full bg-gray-900 border border-gray-600 rounded px-4 py-3 text-white font-mono uppercase text-center tracking-widest focus:border-ics-amber outline-none text-lg">
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="cancelJoin()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded transition-colors text-sm">Voltar</button>
+                            <button onclick="joinRoom()" class="flex-1 bg-ics-amber hover:bg-amber-600 text-black font-bold py-3 rounded transition-colors text-sm">Entrar na Sala</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interface Principal -->
+    <div id="mainInterface" class="hidden h-full flex flex-col w-full relative">
+        
+        <!-- Header -->
+        <header class="bg-ics-panel border-b border-gray-700 px-6 py-3 flex items-center justify-between shrink-0 z-50">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-exclamation-triangle text-ics-red text-xl"></i>
+                    <span class="font-bold text-xl tracking-wider">ICS PRO</span>
+                </div>
+                <div class="hidden md:flex px-3 py-1.5 bg-gray-900 border border-gray-600 rounded text-xs font-mono shadow-inner items-center">
+                    <span class="text-gray-400 mr-2 text-[10px]">SALA:</span>
+                    <span id="headerRoomCode" class="text-ics-amber font-bold tracking-widest text-sm">---</span>
+                </div>
+                <div class="h-6 w-px bg-gray-600 hidden md:block"></div>
+                <div id="scenarioInfo" class="text-sm">
+                    <span class="text-gray-400">Cenário:</span>
+                    <span id="currentScenarioName" class="text-white font-semibold ml-1">Modo Livre</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-6">
+                <div class="text-center">
+                    <div class="text-xs text-gray-500 uppercase tracking-wider">Tempo Simulado</div>
+                    <div id="simTime" class="font-mono text-xl text-ics-amber">00:00:00</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xs text-gray-500 uppercase tracking-wider">Fase</div>
+                    <div id="currentPhase" class="font-semibold text-white">PREPARAÇÃO</div>
+                </div>
+                <div id="stressIndicator" class="hidden px-3 py-1 bg-ics-red rounded text-xs font-bold animate-pulse">
+                    CRISE CRÍTICA
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="togglePause()" id="pauseBtn" class="p-2 bg-gray-700 rounded hover:bg-gray-600 transition" title="Pausar/Retomar">
+                    <i class="fas fa-pause"></i>
+                </button>
+                <button onclick="exitToMenu()" class="p-2 bg-gray-700 rounded hover:bg-ics-red transition" title="Sair para o Menu">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Área Principal (Três Colunas) -->
+        <div class="flex-1 flex overflow-hidden w-full relative">
+            
+            <!-- Sidebar Esquerda - Funções e Recursos ICS -->
+            <aside class="w-64 bg-gray-900 border-r border-gray-700 flex flex-col shrink-0 z-40">
+                <div class="p-4 border-b border-gray-700">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Estrutura de Comando</h3>
+                    <div id="userRoleDisplay" class="text-sm text-ics-amber font-semibold mb-3">Nenhuma função assumida</div>
+                    <div id="roleList" class="space-y-1">
+                        <!-- Preenchido via JS (No modo aluno) -->
+                    </div>
+                </div>
+
+                <div class="p-4 flex-1 overflow-y-auto no-scrollbar">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Inventário de Viaturas</h3>
+                    <div id="resourcePanel" class="space-y-2">
+                        <!-- Recursos do mapa preenchidos via JS -->
+                    </div>
+                </div>
+
+                <div class="p-4 border-t border-gray-700">
+                    <div class="text-xs text-gray-500 mb-1">Status do C4I</div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full status-dot animate-pulse"></div>
+                        <span class="text-sm">Link de Dados Operacional</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Área Central (Mapa + Comms) -->
+            <main class="flex-1 flex flex-col min-w-0 relative z-10">
+                
+                <!-- PAINEL DO MAPA LEAFLET -->
+                <div class="flex-1 relative bg-gray-800 overflow-hidden" id="situationMap">
+                    <!-- Leaflet Container -->
+                    <div id="map"></div>
+                    
+                    <!-- Efeitos de Vento -->
+                    <div id="wind-visual-layer" class="wind-visual-layer"></div>
+
+                    <!-- Overlay de Vento HUD -->
+                    <div class="absolute top-4 left-4 z-[1000] bg-black/80 backdrop-blur px-3 py-2 rounded-lg border border-gray-700 shadow-lg text-sm flex items-center gap-3 pointer-events-none">
+                        <div class="w-8 h-8 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center relative">
+                            <i id="wind-arrow" class="fa-solid fa-arrow-up text-ics-blue transition-transform duration-1000 text-lg drop-shadow-[0_0_5px_rgba(37,99,235,0.8)]"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-gray-400 uppercase tracking-wider leading-none mb-1">Vento</span>
+                            <span id="wind-label" class="font-bold text-white leading-none">Norte (N)</span>
+                        </div>
+                    </div>
+
+                    <!-- Métricas HUD -->
+                    <div class="absolute top-4 right-4 space-y-2 z-[1000] pointer-events-none">
+                        <div id="metricCards" class="space-y-2 pointer-events-auto">
+                            <!-- Cards de métricas dinâmicos -->
+                        </div>
+                    </div>
+
+                    <!-- Alertas Flutuantes (Injects) -->
+                    <div id="floatingAlerts" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-3/4 max-w-md z-[2000]"></div>
+
+                    <!-- Botão IA Integrado no Mapa -->
+                    <button onclick="toggleAIChat()" class="absolute bottom-6 left-4 z-[2000] bg-indigo-600 hover:bg-indigo-500 text-white rounded-full w-12 h-12 shadow-[0_0_15px_rgba(79,70,229,0.5)] flex items-center justify-center transition-transform hover:scale-110 border-2 border-indigo-400">
+                        <i class="fa-solid fa-robot text-xl"></i>
+                    </button>
+                    
+                    <!-- Janela de Chat IA -->
+                    <div id="ai-chat-window" class="ai-chat-closed absolute bottom-20 left-4 z-[2000] w-[340px] bg-gray-800 border border-indigo-500 rounded-xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 h-[400px]">
+                        <div class="bg-indigo-600 p-3 flex justify-between items-center text-white shadow-md shrink-0">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-brain"></i>
+                                <div><h3 class="font-bold text-sm">Consultor IA</h3><p class="text-[10px] text-indigo-200 leading-none">Especialista Hazmat/SCI</p></div>
+                            </div>
+                            <button onclick="toggleAIChat()" class="hover:text-red-300 transition-colors px-2"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div id="ai-chat-messages" class="flex-1 p-3 overflow-y-auto bg-gray-900 flex flex-col gap-3 text-sm">
+                            <div class="msg-ai p-2 px-3 shadow">Comandante, acesso ao manual ABIQUIM e protocolos SCI ativados. Como auxilio?</div>
+                        </div>
+                        <div id="ai-loading" class="hidden px-4 py-2 bg-gray-900 text-indigo-400 text-xs flex items-center gap-1 shrink-0">
+                            Analisando <div class="flex gap-1 ml-1"><div class="w-1 h-1 bg-indigo-400 rounded-full typing-dot"></div><div class="w-1 h-1 bg-indigo-400 rounded-full typing-dot"></div><div class="w-1 h-1 bg-indigo-400 rounded-full typing-dot"></div></div>
+                        </div>
+                        <div class="p-2 bg-gray-800 border-t border-gray-700 flex gap-2 shrink-0">
+                            <input type="text" id="ai-input" placeholder="Pergunte à IA..." class="flex-1 bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500" onkeypress="if(event.key === 'Enter') sendToAI()">
+                            <button onclick="sendToAI()" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded px-3 py-1 transition-colors"><i class="fa-solid fa-paper-plane text-xs"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel de Comunicação Multi-Agência -->
+                <div class="h-64 bg-ics-panel border-t border-gray-700 flex flex-col shrink-0 relative z-30">
+                    <div class="px-4 py-2 bg-gray-800 border-b border-gray-700 flex items-center justify-between shrink-0">
+                        <span class="text-sm font-semibold text-gray-300"><i class="fas fa-satellite-dish mr-2"></i>Rádio / Comunicações</span>
+                        <div class="flex space-x-2">
+                            <button onclick="filterComms('all')" class="text-xs px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 text-white">Todas</button>
+                            <button onclick="filterComms('urgent')" class="text-xs px-2 py-1 bg-ics-red/20 text-ics-red rounded hover:bg-ics-red/30">Urgentes</button>
+                        </div>
+                    </div>
+                    <div id="communicationsLog" class="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-sm no-scrollbar">
+                        <!-- Mensagens -->
+                    </div>
+                    <div class="p-3 border-t border-gray-700 bg-gray-800 shrink-0">
+                        <div class="flex space-x-2">
+                            <select id="messageTarget" class="bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm text-white">
+                                <option value="all">Rede Geral</option>
+                                <option value="command">Comando</option>
+                                <option value="operations">Operações</option>
+                                <option value="logistics">Logística</option>
+                            </select>
+                            <input type="text" id="messageInput" placeholder="Mensagem de rádio..." class="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white placeholder-gray-500" onkeypress="if(event.key==='Enter')sendMessage()">
+                            <button onclick="sendMessage()" class="px-4 py-1.5 bg-ics-blue hover:bg-blue-600 rounded text-white text-sm transition font-bold">
+                                TX <i class="fas fa-broadcast-tower ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Sidebar Direita - Ferramentas de Construção/Operação -->
+            <aside class="w-80 bg-gray-900 border-l border-gray-700 flex flex-col shrink-0 z-40 overflow-y-auto no-scrollbar" id="controlPanel">
+                <!-- Conteúdo preenchido dinamicamente (Modo Instrutor ou Aluno) -->
+            </aside>
+        </div>
+    </div>
+
+    <!-- Modal de Seleção de Cenário (Carrega no mapa real) -->
+    <div id="scenarioModal" class="hidden fixed inset-0 z-[6000] bg-black/80 flex items-center justify-center p-4">
+        <div class="bg-ics-panel rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col border border-gray-600">
+            <div class="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-800">
+                <h2 class="text-2xl font-bold text-white"><i class="fa-solid fa-map-location-dot text-ics-blue mr-2"></i>Selecionar Cenário Cartográfico</h2>
+                <button onclick="startScenario('livre')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition border border-gray-500">
+                    Ir para Modo Livre (Sandbox)
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-gray-900">
+                <div id="scenarioGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Cenários preenchidos via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Simples -->
+    <div id="simple-toast" class="absolute top-20 left-1/2 transform -translate-x-1/2 z-[9000] bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded shadow-lg text-sm transition-opacity duration-300 opacity-0 pointer-events-none text-center">
+        Mensagem
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script>
+        // --- CHAVE DA API (GROQ LLM) ---
+        const GROQ_API_KEY = "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";
+
+        // --- ESTADO GLOBAL ---
+        let currentMode = '';
+        let currentScenario = null;
+        let simTimer = null;
+        let simSeconds = 0;
+        let isPaused = false;
+        let userRole = null;
+        let activeEvents = [];
+        let communications = [];
+        let decisions = [];
+        let stressLevel = 0;
+        
+        let currentRoomCode = '';
+        
+        let instructorPlacementMode = null; 
+        let placementMode = null; // para zonas do aluno
+        let map, zonesLayer;
+        let markers = [];
+        let scenarioElements = []; 
+        let currentWindDeg = 0; 
+
+        const studentZones = { hot: null, warm: null, cold: null };
+        const zoneConfig = {
+            'hot': { color: 'red', fillColor: '#dc2626', opacity: 0.4, title: 'Zona Quente' },
+            'warm': { color: 'yellow', fillColor: '#d97706', opacity: 0.2, title: 'Zona Morna' },
+            'cold': { color: 'green', fillColor: '#16a34a', opacity: 0.1, title: 'Zona Fria' }
+        };
+
+        const iconsConfig = {
+            'pc': { html: "<div class='sci-marker sci-pc text-[10px] text-white font-bold'>PC</div>", size: [40, 30], anchor: [20, 15], popup: "Posto de Comando" },
+            'e': { html: "<div class='sci-marker sci-e text-[10px] text-white font-bold'>E</div>", size: [35, 35], anchor: [17, 17], popup: "Área de Espera" },
+            'h': { html: "<div class='sci-marker sci-h text-[10px] text-white font-bold'>H</div>", size: [35, 35], anchor: [17, 17], popup: "Heliponto" },
+            'fire': { html: "<div class='sci-marker sci-resource'><i class='fa-solid fa-truck-fast'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Auto Bomba (Incêndio)" },
+            'foam': { html: "<div class='sci-marker sci-resource' style='background-color: #9333ea;'><i class='fa-solid fa-spray-can'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Carreta de LGE" },
+            'ship': { html: "<div class='sci-marker sci-water'><i class='fa-solid fa-ship'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Navio Bomba" },
+            'amb': { html: "<div class='sci-marker sci-resource' style='background-color: #16a34a;'><i class='fa-solid fa-truck-medical'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Ambulância (Resgate)" }
+        };
+
+        // Inventário híbrido (mantém contagem para o mapa e exibição)
+        let inventory = {
+            'pc': { label: 'Posto Comando', total: 1, used: 0 },
+            'e': { label: 'Área Espera', total: 1, used: 0 },
+            'h': { label: 'Heliponto', total: 1, used: 0 },
+            'fire': { label: 'Auto Bomba', total: 5, used: 0 },
+            'foam': { label: 'Carreta LGE', total: 3, used: 0 },
+            'ship': { label: 'Navio Bomba', total: 2, used: 0 },
+            'amb': { label: 'Ambulância', total: 3, used: 0 }
+        };
+
+        // --- CENÁRIOS MESCLADOS (MAPA + DADOS C4I) ---
+        const scenarios = [
+            {
+                id: 'ultracargo', title: 'Incêndio em Terminal de Líquidos (Ultracargo)',
+                category: 'Industrial', difficulty: 'Extremo', duration: '120 min',
+                lat: -23.9248, lng: -46.3685, zoom: 16, windDeg: 180, windLabel: "Sul (S)",
+                description: 'Incêndio de grandes proporções em parque de tanques de combustíveis na Alemoa. Risco iminente de colapso de estruturas e propagação (boil-over).',
+                objectives: ['Estabelecer Posto de Comando', 'Resfriamento maciço (Navios)', 'Contenção com LGE', 'Evitar propagação para Amônia'],
+                inventory: { pc: 1, e: 1, h: 1, fire: 8, foam: 6, ship: 3, amb: 3 },
+                elements: [
+                    {type: 'fire', latOffset: 0, lngOffset: 0, scale: 2.5},
+                    {type: 'smoke', latOffset: 0, lngOffset: 0, scale: 3},
+                    {type: 'building', latOffset: -0.0006, lngOffset: -0.0006, scale: 1.5}
+                ],
+                phases: [
+                    { name: 'Avaliação Inicial', duration: 300, events: ['fire_spread'] },
+                    { name: 'Ataque e Resfriamento', duration: 900, events: ['water_shortage'] },
+                    { name: 'Controle Final', duration: 600, events: ['containment_success'] }
+                ]
+            },
+            {
+                id: 'rodovia_hazmat', title: 'Acidente Rodoviário com Produto Perigoso',
+                category: 'Hazmat', difficulty: 'Alto', duration: '60 min',
+                lat: -23.8778, lng: -46.4133, zoom: 17, windDeg: 90, windLabel: "Leste (E)",
+                description: 'Colisão envolvendo um caminhão-tanque na Rodovia Anchieta. Vazamento ativo de Amônia Anidra (ONU 1005). Nuvem tóxica em expansão.',
+                objectives: ['Consultar IA (Manual ERG)', 'Isolar rodovia rigorosamente', 'Estabelecer Zonas (Quente/Morna)', 'Descontaminação'],
+                inventory: { pc: 1, e: 1, h: 1, fire: 4, foam: 1, ship: 0, amb: 5 },
+                elements: [
+                    {type: 'train', latOffset: 0, lngOffset: 0, scale: 1.5}, // simula carreta longa
+                    {type: 'car', latOffset: -0.0002, lngOffset: 0.0001, scale: 1},
+                    {type: 'hazmat', latOffset: 0, lngOffset: 0, scale: 1.5, product: "ONU 1005"},
+                    {type: 'smoke', latOffset: 0, lngOffset: 0, scale: 1.5}
+                ],
+                phases: [
+                    { name: 'Isolamento Tático', duration: 300, events: ['toxic_cloud'] },
+                    { name: 'Identificação & Resgate', duration: 900, events: ['wind_change'] },
+                    { name: 'Mitigação', duration: 600, events: [] }
+                ]
+            },
+            {
+                id: 'aeroporto', title: 'Emergência Aeronáutica (Múltiplas Vítimas)',
+                category: 'MCI / Resgate', difficulty: 'Extremo', duration: '45 min',
+                lat: -23.4322, lng: -46.4692, zoom: 16, windDeg: 270, windLabel: "Oeste (W)",
+                description: 'Aeronave derrapou para fora da pista no Aeroporto de Guarulhos. Asa direita e motor em chamas. Cenário de múltiplas vítimas (MCI) e pânico.',
+                objectives: ['Combate massivo com LGE', 'Estabelecer lonas de Triagem (START)', 'Corredores de ambulância'],
+                inventory: { pc: 1, e: 2, h: 2, fire: 8, foam: 5, ship: 0, amb: 10 },
+                elements: [
+                    {type: 'plane', latOffset: 0, lngOffset: 0, scale: 3.5},
+                    {type: 'fire', latOffset: 0.0002, lngOffset: -0.0005, scale: 2},
+                    {type: 'smoke', latOffset: 0.0002, lngOffset: -0.0005, scale: 3}
+                ],
+                phases: [
+                    { name: 'Supressão de Fogo', duration: 300, events: ['panic_crowd'] },
+                    { name: 'Triagem (MCI)', duration: 600, events: ['secondary_fire'] },
+                    { name: 'Transporte', duration: 600, events: [] }
+                ]
+            }
+        ];
+
+        // Eventos Dinâmicos Injetáveis
+        const eventDatabase = {
+            fire_spread: { title: 'Propagação Rápida', description: 'Ventos fortes estão espalhando o incêndio para tanques vizinhos.', urgency: 'high' },
+            toxic_cloud: { title: 'Nuvem Tóxica Movendo-se', description: 'A pluma química está a atingir a Zona Morna. Recuar perímetro!', urgency: 'high' },
+            wind_change: { title: 'Mudança de Vento', description: 'O vento virou de forma brusca.', urgency: 'medium' },
+            water_shortage: { title: 'Queda de Pressão', description: 'Rede de hidrantes comprometida. Necessário captação alternativa.', urgency: 'high' },
+            panic_crowd: { title: 'Pânico Generalizado', description: 'Vítimas e passageiros estão a invadir a área quente.', urgency: 'medium' },
+            secondary_fire: { title: 'Foco Secundário', description: 'Vazamento de combustível iniciou novo foco sob a fuselagem.', urgency: 'high' }
+        };
+
+        // --- INICIALIZAÇÃO E MAPA ---
+        function initMap() {
+            if(map) return;
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([38.7223, -9.1393], 13); // Default view
+            L.control.zoom({ position: 'topright' }).addTo(map);
+
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }).addTo(map);
+            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+            L.control.layers({ "Satélite": satelliteLayer, "Ruas": streetLayer }, null, { position: 'bottomright' }).addTo(map);
+
+            zonesLayer = L.layerGroup().addTo(map);
+
+            // Evento global de clique no mapa para ferramentas de construção/desenho
+            map.on('click', function(e) {
+                if (currentMode === 'student' && placementMode) {
+                    const r = parseInt(document.getElementById(`radius-${placementMode}`).value);
+                    if (studentZones[placementMode]) { 
+                        studentZones[placementMode].setLatLng(e.latlng).setRadius(r); 
+                    } else { 
+                        studentZones[placementMode] = L.circle(e.latlng, { color: zoneConfig[placementMode].color, fillColor: zoneConfig[placementMode].fillColor, fillOpacity: zoneConfig[placementMode].opacity, radius: r }).bindPopup(`<b>${zoneConfig[placementMode].title}</b>`).addTo(zonesLayer); 
+                    }
+                    if (studentZones.cold) studentZones.cold.bringToBack();
+                    if (studentZones.warm) studentZones.warm.bringToFront();
+                    if (studentZones.hot) studentZones.hot.bringToFront();
+                    
+                    placementMode = null; document.getElementById('map').style.cursor = '';
+                    document.querySelectorAll('.btn-zone').forEach(btn => btn.classList.remove('ring-2', 'ring-white', 'bg-ics-blue'));
+                    addCommunication('SISTEMA', userRole || 'ALUNO', `Posicionou a ${zoneConfig[placementMode?placementMode:'Zona']}.`, 'system');
+                } 
+                else if (currentMode === 'instructor' && instructorPlacementMode) {
+                    createScenarioElement(e.latlng, instructorPlacementMode);
+                    instructorPlacementMode = null; document.getElementById('map').style.cursor = '';
+                    document.querySelectorAll('.btn-map-tool').forEach(b => b.classList.remove('ring-2', 'ring-white', 'bg-ics-blue'));
+                }
+            });
+        }
+
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for(let i=0; i<6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+            return code;
+        }
+
+        function enterMode(mode) {
+            if (mode === 'student_prompt') {
+                document.getElementById('studentBtnGroup').classList.add('hidden');
+                document.getElementById('studentJoinDiv').classList.remove('hidden');
+                setTimeout(() => document.getElementById('roomCodeInput').focus(), 100);
+                return;
+            }
+
+            currentMode = mode;
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainInterface').classList.remove('hidden');
+            
+            initMap();
+            setTimeout(() => { map.invalidateSize(); }, 500); // Crucial para o mapa não bugar após esconder a div de login
+
+            if (mode === 'instructor') {
+                currentRoomCode = generateRoomCode();
+                document.getElementById('headerRoomCode').textContent = currentRoomCode;
+                setupInstructorMode();
+                showScenarioModal();
+            } else {
+                setupStudentMode();
+                showRoleSelection();
+                // Em modo aluno, se não carregou cenário, vai para um livre no centro de SP por default
+                map.setView([-23.5505, -46.6333], 15);
+                updateResourcePanel();
+            }
+        }
+
+        function joinRoom() {
+            const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+            if (code.length < 4) {
+                const input = document.getElementById('roomCodeInput');
+                input.classList.add('border-red-500');
+                setTimeout(() => input.classList.remove('border-red-500'), 1000);
+                return;
+            }
+            
+            currentRoomCode = code;
+            document.getElementById('headerRoomCode').textContent = currentRoomCode;
+            
+            enterMode('student');
+            
+            setTimeout(() => {
+                addCommunication('SISTEMA', 'all', `Conectado à sala de simulação [${currentRoomCode}]. Sincronização de recursos ativa.`, 'system');
+                showSimpleToast(`Conectado à sala ${currentRoomCode}`);
+            }, 1000);
+        }
+
+        function cancelJoin() {
+            document.getElementById('studentJoinDiv').classList.add('hidden');
+            document.getElementById('studentBtnGroup').classList.remove('hidden');
+            document.getElementById('roomCodeInput').value = '';
+        }
+
+        // --- PAINÉIS DE CONTROLO ---
+        function setupInstructorMode() {
+            document.getElementById('controlPanel').innerHTML = `
+                <div class="p-4 border-b border-gray-700 bg-gray-800 shrink-0 flex justify-between items-center">
+                    <h3 class="font-bold text-ics-blue uppercase tracking-wider text-sm"><i class="fas fa-gamepad mr-2"></i>Construtor / Instrutor</h3>
+                    <div class="bg-gray-900 border border-ics-blue px-2 py-1 rounded text-xs text-white font-mono cursor-help" title="Partilhe este código com os alunos para eles entrarem.">
+                        SALA: <span class="text-ics-amber font-bold ml-1">${currentRoomCode}</span>
+                    </div>
+                </div>
+                <div class="p-4 space-y-4">
+                    <!-- Busca Mapa -->
+                    <div class="bg-gray-800 rounded p-3 border border-gray-700">
+                        <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase">Ir para Local</h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="location-search" placeholder="Ex: Aeroporto, Porto..." class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:border-ics-blue outline-none">
+                            <button onclick="searchLocation()" class="bg-ics-blue hover:bg-blue-500 text-white px-3 py-1 rounded text-xs font-bold">Ir</button>
+                        </div>
+                    </div>
+
+                    <!-- Clima -->
+                    <div class="bg-gray-800 rounded p-3 border border-gray-700">
+                        <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase">Condições (Vento)</h4>
+                        <select id="wind-dir-select" onchange="changeWind(this.value, this.options[this.selectedIndex].text)" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-xs text-white mb-2">
+                            <option value="0">Norte (N)</option><option value="45">Nordeste (NE)</option><option value="90">Leste (E)</option><option value="135">Sudeste (SE)</option>
+                            <option value="180">Sul (S)</option><option value="225">Sudoeste (SW)</option><option value="270">Oeste (W)</option><option value="315">Noroeste (NW)</option>
+                        </select>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="toggle-wind-visual" onchange="toggleWindVisual(this.checked)" class="w-3 h-3 accent-ics-blue cursor-pointer">
+                            <label for="toggle-wind-visual" class="text-xs text-gray-300 cursor-pointer">Exibir animação de vento</label>
+                        </div>
+                    </div>
+
+                    <!-- Elementos no Mapa -->
+                    <div class="bg-gray-800 rounded p-3 border border-gray-700">
+                        <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase">Adicionar ao Mapa</h4>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <button onclick="togglePlacement('fire', this)" class="btn-map-tool flex items-center justify-center gap-1 bg-gray-900 hover:bg-gray-700 text-red-400 p-1.5 rounded border border-gray-600 text-xs"><i class="fa-solid fa-fire"></i> Fogo</button>
+                            <button onclick="togglePlacement('smoke', this)" class="btn-map-tool flex items-center justify-center gap-1 bg-gray-900 hover:bg-gray-700 text-gray-400 p-1.5 rounded border border-gray-600 text-xs"><i class="fa-solid fa-cloud"></i> Fumo</button>
+                        </div>
+                        <div class="flex gap-1 mb-2">
+                            <input type="text" id="hazmat-product" placeholder="ONU / Produto" class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs text-white">
+                            <button onclick="togglePlacement('hazmat', this)" class="btn-map-tool bg-gray-900 hover:bg-gray-700 text-green-400 px-2 rounded border border-gray-600 text-xs"><i class="fa-solid fa-biohazard"></i></button>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1 mb-2">
+                            <button onclick="togglePlacement('plane', this)" class="btn-map-tool bg-gray-900 hover:bg-gray-700 text-white p-1 rounded border border-gray-600"><i class="fa-solid fa-plane"></i></button>
+                            <button onclick="togglePlacement('car', this)" class="btn-map-tool bg-gray-900 hover:bg-gray-700 text-white p-1 rounded border border-gray-600"><i class="fa-solid fa-car-burst"></i></button>
+                            <button onclick="togglePlacement('train', this)" class="btn-map-tool bg-gray-900 hover:bg-gray-700 text-white p-1 rounded border border-gray-600"><i class="fa-solid fa-train"></i></button>
+                            <button onclick="togglePlacement('building', this)" class="btn-map-tool bg-gray-900 hover:bg-gray-700 text-white p-1 rounded border border-gray-600"><i class="fa-solid fa-industry"></i></button>
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-gray-400">
+                            <span>Tam:</span><input type="range" id="object-scale" min="0.5" max="4" step="0.5" value="1" class="w-full accent-ics-blue">
+                        </div>
+                    </div>
+
+                    <!-- Injeção C4I -->
+                    <div class="bg-gray-800 rounded p-3 border border-gray-700">
+                        <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase">Injetar Crise (C4I)</h4>
+                        <select id="eventSelector" class="w-full bg-gray-900 border border-gray-600 rounded p-1.5 text-xs text-white mb-2">
+                            <option value="">Eventos pré-programados...</option>
+                            ${Object.entries(eventDatabase).map(([key, evt]) => `<option value="${key}">${evt.title}</option>`).join('')}
+                        </select>
+                        <button onclick="injectEvent()" class="w-full py-1.5 mb-2 bg-ics-orange hover:bg-orange-600 rounded text-white text-xs font-bold"><i class="fas fa-bolt mr-1"></i>Disparar</button>
+                        <textarea id="instructorMsg" class="w-full bg-gray-900 border border-gray-600 rounded p-1.5 text-xs text-white mb-1" rows="2" placeholder="Ou digite alerta livre..."></textarea>
+                        <button onclick="sendInstructorMessage()" class="w-full py-1.5 bg-ics-red hover:bg-red-600 rounded text-white text-xs font-bold"><i class="fas fa-bullhorn mr-1"></i>Alerta Livre</button>
+                    </div>
+                </div>
+            `;
+            // Instrutor controla inventário, então renderizamos no left sidebar de forma clicável (básica)
+            updateInstructorInventoryDisplay();
+        }
+
+        function setupStudentMode() {
+            document.getElementById('controlPanel').innerHTML = `
+                <div class="p-4 border-b border-gray-700 bg-gray-800 shrink-0">
+                    <h3 class="font-bold text-ics-amber uppercase tracking-wider text-sm"><i class="fas fa-user-graduate mr-2"></i>Ações Táticas</h3>
+                </div>
+                <div class="p-4 space-y-4">
+                    
+                    <!-- Ferramenta Zonas -->
+                    <div class="bg-gray-800 rounded p-3 border border-gray-700">
+                        <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase">1. Perímetros (Mapa)</h4>
+                        <div class="space-y-2">
+                            <div class="bg-gray-900 p-2 rounded border border-gray-700">
+                                <div class="flex items-center justify-between">
+                                    <button onclick="enableZonePlacement('hot', this)" class="btn-zone w-full text-left text-xs text-red-500 font-bold"><i class="fa-solid fa-crosshairs mr-1"></i> Zona Quente</button>
+                                    <button onclick="removeZone('hot')" class="text-gray-500 hover:text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                                </div>
+                                <input type="range" id="radius-hot" min="50" max="500" value="150" class="w-full mt-1 accent-red-500" oninput="updateRadius('hot', this.value)">
+                            </div>
+                            <div class="bg-gray-900 p-2 rounded border border-gray-700">
+                                <div class="flex items-center justify-between">
+                                    <button onclick="enableZonePlacement('warm', this)" class="btn-zone w-full text-left text-xs text-yellow-500 font-bold"><i class="fa-solid fa-crosshairs mr-1"></i> Zona Morna</button>
+                                    <button onclick="removeZone('warm')" class="text-gray-500 hover:text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                                </div>
+                                <input type="range" id="radius-warm" min="100" max="1000" value="350" class="w-full mt-1 accent-yellow-500" oninput="updateRadius('warm', this.value)">
+                            </div>
+                            <div class="bg-gray-900 p-2 rounded border border-gray-700">
+                                <div class="flex items-center justify-between">
+                                    <button onclick="enableZonePlacement('cold', this)" class="btn-zone w-full text-left text-xs text-green-500 font-bold"><i class="fa-solid fa-crosshairs mr-1"></i> Zona Fria</button>
+                                    <button onclick="removeZone('cold')" class="text-gray-500 hover:text-red-500"><i class="fa-solid fa-trash text-xs"></i></button>
+                                </div>
+                                <input type="range" id="radius-cold" min="200" max="2000" value="600" class="w-full mt-1 accent-green-500" oninput="updateRadius('cold', this.value)">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Colocar Viaturas no Mapa -->
+                    <div class="bg-gray-800 rounded p-3 border border-gray-700">
+                        <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase">2. Distribuir Recursos</h4>
+                        <div id="student-resources-grid" class="grid grid-cols-2 gap-2">
+                            <!-- Gerado via JS no updateResourcePanel -->
+                        </div>
+                    </div>
+
+                    <!-- Ações C4I -->
+                    <div class="bg-gray-800 rounded p-3 border border-gray-700">
+                        <h4 class="text-xs font-bold text-gray-400 mb-2 uppercase">3. Ações de Comando</h4>
+                        <div id="actionButtons" class="space-y-1">
+                            <div class="text-center text-gray-500 text-xs py-4">Selecione uma função na barra lateral.</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            updateResourcePanel();
+        }
+
+        // --- SISTEMA DE CENÁRIOS (MODAL) ---
+        function showScenarioModal() {
+            const grid = document.getElementById('scenarioGrid');
+            grid.innerHTML = scenarios.map(s => `
+                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-ics-blue cursor-pointer transition group" onclick="startScenario('${s.id}')">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded ${getDifficultyColor(s.difficulty)} uppercase">${s.difficulty}</span>
+                        <span class="text-xs text-gray-400"><i class="fa-regular fa-clock"></i> ${s.duration}</span>
+                    </div>
+                    <h3 class="font-bold text-white mb-2 group-hover:text-ics-blue transition">${s.title}</h3>
+                    <p class="text-xs text-gray-400 mb-3 line-clamp-2">${s.description}</p>
+                    <div class="flex flex-wrap gap-1">
+                        ${s.objectives.slice(0,3).map(o => `<span class="text-[9px] bg-gray-900 border border-gray-700 px-1.5 py-0.5 rounded text-gray-300">${o}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('scenarioModal').classList.remove('hidden');
+        }
+
+        function getDifficultyColor(diff) {
+            const colors = { 'Médio': 'bg-yellow-600 text-white', 'Alto': 'bg-orange-600 text-white', 'Extremo': 'bg-red-600 text-white' };
+            return colors[diff] || 'bg-gray-600';
+        }
+
+        function startScenario(scenarioId) {
+            document.getElementById('scenarioModal').classList.add('hidden');
+            
+            if(scenarioId === 'livre') {
+                document.getElementById('currentScenarioName').textContent = "Modo Livre";
+                showSimpleToast("Modo Livre ativado.");
+                return;
+            }
+
+            currentScenario = scenarios.find(s => s.id === scenarioId);
+            if(!currentScenario) return;
+
+            document.getElementById('currentScenarioName').textContent = currentScenario.title;
+
+            // Setup Map
+            scenarioElements.forEach(el => { if(el) map.removeLayer(el); }); scenarioElements = [];
+            markers.forEach(el => { if(el) map.removeLayer(el); }); markers = [];
+            ['hot', 'warm', 'cold'].forEach(z => removeZone(z));
+            
+            map.flyTo([currentScenario.lat, currentScenario.lng], currentScenario.zoom);
+            changeWind(currentScenario.windDeg, currentScenario.windLabel);
+            if(document.getElementById('wind-dir-select')) document.getElementById('wind-dir-select').value = currentScenario.windDeg;
+
+            // Reset Inventory
+            Object.keys(inventory).forEach(k => {
+                inventory[k].total = currentScenario.inventory[k] || 0;
+                inventory[k].used = 0;
+            });
+            updateResourcePanel();
+
+            // Spawn Elements
+            setTimeout(() => {
+                currentScenario.elements.forEach(el => {
+                    createScenarioElement([currentScenario.lat + el.latOffset, currentScenario.lng + el.lngOffset], el.type, el.scale, el.product);
+                });
+            }, 1000);
+
+            // Simulation Engine
+            simSeconds = 0;
+            stressLevel = 0.2; // base stress
+            startSimTimer();
+            setupPhases();
+
+            addCommunication('SISTEMA', 'all', `Cenário ativado: ${currentScenario.title}`, 'system');
+        }
+
+        // --- MOTOR DE SIMULAÇÃO (TEMPO, FASES E STRESS) ---
+        function setupPhases() {
+            const phaseDiv = document.getElementById('currentPhase');
+            let currentPhaseIdx = 0;
+
+            function advancePhase() {
+                if(!currentScenario) return;
+                if (currentPhaseIdx < currentScenario.phases.length) {
+                    const phase = currentScenario.phases[currentPhaseIdx];
+                    phaseDiv.textContent = phase.name.toUpperCase();
+                    phaseDiv.className = 'font-semibold text-ics-amber animate-pulse';
+
+                    phase.events.forEach((evtKey, idx) => {
+                        setTimeout(() => { if (!isPaused) injectEvent(evtKey); }, (idx + 1) * 20000); 
+                    });
+
+                    currentPhaseIdx++;
+                    if (currentPhaseIdx < currentScenario.phases.length) {
+                        setTimeout(advancePhase, phase.duration * 1000);
+                    }
+                }
+            }
+            advancePhase();
+        }
+
+        function startSimTimer() {
+            if (simTimer) clearInterval(simTimer);
+            simTimer = setInterval(() => {
+                if (!isPaused) {
+                    simSeconds++;
+                    const h = Math.floor(simSeconds / 3600); const m = Math.floor((simSeconds % 3600) / 60); const s = simSeconds % 60;
+                    document.getElementById('simTime').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+                    if (Math.random() < (0.001 + stressLevel * 0.005)) {
+                        // Random minor complication
+                        stressLevel = Math.min(stressLevel + 0.05, 1);
+                        updateMetrics();
+                    }
+                }
+            }, 1000);
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('pauseBtn');
+            btn.innerHTML = isPaused ? '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>';
+            btn.classList.toggle('bg-ics-red', isPaused);
+            addCommunication('SISTEMA', 'all', isPaused ? 'Simulação PAUSADA' : 'Simulação RETOMADA', 'system');
+        }
+
+        // --- SISTEMA DE COMUNICAÇÕES E EVENTOS (C4I) ---
+        function addCommunication(from, to, message, type = 'normal') {
+            const log = document.getElementById('communicationsLog');
+            const entry = document.createElement('div');
+            entry.className = `chat-message p-2 rounded border-l-2 ${type === 'urgent' ? 'bg-red-900/30 border-red-500 text-red-100' : type === 'system' ? 'bg-blue-900/20 border-blue-500 text-blue-100' : 'bg-gray-800 border-gray-600 text-gray-300'}`;
+
+            const time = new Date().toLocaleTimeString('pt-BR', {hour12: false});
+            entry.innerHTML = `
+                <div class="flex items-center space-x-2 text-[10px] mb-0.5 opacity-80 uppercase tracking-wide">
+                    <span class="font-bold">${from}</span> <span class="text-gray-500">TX</span> <span>${to}</span> <span class="ml-auto text-gray-500">${time}</span>
+                </div>
+                <div>${message}</div>
+            `;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+            communications.push({from, to, message, time, type});
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const target = document.getElementById('messageTarget');
+            const msg = input.value.trim();
+            if (msg) {
+                const from = currentMode === 'instructor' ? 'COMANDO-BASE' : (userRole ? userRole : 'UNID-MÓVEL');
+                addCommunication(from, target.options[target.selectedIndex].text, msg);
+                input.value = '';
+            }
+        }
+
+        function injectEvent(predefinedKey = null) {
+            const key = predefinedKey || document.getElementById('eventSelector').value;
+            if(!key) return;
+            const event = eventDatabase[key];
+            if (!event) return;
+
+            activeEvents.push({...event, id: Date.now()});
+            stressLevel = Math.min(stressLevel + 0.15, 1);
+            
+            addCommunication('SISTEMA/ALERTA', 'REDE GERAL', `ATENÇÃO: ${event.title} - ${event.description}`, 'urgent');
+            showFloatingAlert(event.title, event.description, event.urgency);
+            updateMetrics();
+        }
+
+        function sendInstructorMessage() {
+            const textarea = document.getElementById('instructorMsg');
+            const msg = textarea.value.trim();
+            if (msg) {
+                addCommunication('COORDENAÇÃO', 'REDE GERAL', msg, 'urgent');
+                showFloatingAlert("Mensagem do Comando", msg, "high");
+                textarea.value = '';
+            }
+        }
+
+        function showFloatingAlert(title, msg, urgency="high") {
+            const container = document.getElementById('floatingAlerts');
+            const alert = document.createElement('div');
+            alert.className = `pointer-events-auto mb-2 p-3 rounded-lg border-l-4 ${urgency === 'high' ? 'bg-red-900/95 border-red-500' : 'bg-orange-900/95 border-orange-500'} animate-slide-in shadow-xl flex justify-between items-start`;
+            alert.innerHTML = `
+                <div>
+                    <h4 class="font-bold text-white text-sm flex items-center"><i class="fas fa-exclamation-triangle mr-2 ${urgency==='high'?'text-red-400':'text-orange-400'}"></i>${title}</h4>
+                    <p class="text-xs text-gray-200 mt-1">${msg}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-white ml-2"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(alert);
+            setTimeout(() => { if(alert.parentElement) alert.remove(); }, 15000);
+            
+            // Ativa o flash vermelho se for urgente
+            if(urgency === 'high') {
+                const mapC = document.getElementById('situationMap');
+                mapC.classList.add('alert-active');
+                setTimeout(() => mapC.classList.remove('alert-active'), 3000);
+            }
+        }
+
+        function filterComms(type) {
+            const log = document.getElementById('communicationsLog');
+            const entries = log.children;
+            for (let entry of entries) {
+                if (type === 'all') entry.style.display = 'block';
+                else if (type === 'urgent') entry.style.display = entry.classList.contains('bg-red-900/30') ? 'block' : 'none';
+            }
+        }
+
+        function updateMetrics() {
+            const container = document.getElementById('metricCards');
+            const stressPercent = Math.round(stressLevel * 100);
+
+            container.innerHTML = `
+                <div class="bg-black/80 backdrop-blur rounded p-2 border border-gray-700 w-32">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider">Nível de Crise</div>
+                    <div class="flex items-center mt-1">
+                        <div class="flex-1 bg-gray-700 rounded-full h-1.5 mr-2">
+                            <div class="bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 h-1.5 rounded-full transition-all" style="width: ${stressPercent}%"></div>
+                        </div>
+                        <span class="text-xs font-bold ${stressPercent > 70 ? 'text-red-500' : 'text-yellow-500'}">${stressPercent}%</span>
+                    </div>
+                </div>
+                <div class="bg-black/80 backdrop-blur rounded p-2 border border-gray-700 w-32 flex justify-between items-center">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider">Eventos</div>
+                    <div class="text-sm font-bold text-white">${activeEvents.length}</div>
+                </div>
+                <div class="bg-black/80 backdrop-blur rounded p-2 border border-gray-700 w-32 flex justify-between items-center">
+                    <div class="text-[10px] text-gray-400 uppercase tracking-wider">Decisões</div>
+                    <div class="text-sm font-bold text-ics-blue">${decisions.length}</div>
+                </div>
+            `;
+            const sInd = document.getElementById('stressIndicator');
+            if (stressPercent > 80) sInd.classList.remove('hidden'); else sInd.classList.add('hidden');
+        }
+
+        // --- SISTEMA DE FUNÇÕES (MODO ALUNO) ---
+        function showRoleSelection() {
+            const roles = [
+                {id: 'commander', name: 'Comandante (CI)', icon: 'fa-star', color: 'text-yellow-400'},
+                {id: 'operations', name: 'Operações', icon: 'fa-fire', color: 'text-red-400'},
+                {id: 'planning', name: 'Planejamento', icon: 'fa-map', color: 'text-blue-400'},
+                {id: 'safety', name: 'Segurança', icon: 'fa-shield-alt', color: 'text-orange-400'}
+            ];
+            const panel = document.getElementById('roleList');
+            panel.innerHTML = roles.map(r => `
+                <button onclick="selectRole('${r.id}', '${r.name}')" class="w-full text-left py-1.5 px-2 rounded bg-gray-800 hover:bg-gray-700 border border-gray-700 hover:border-gray-500 transition flex items-center space-x-2 group">
+                    <i class="fas ${r.icon} ${r.color} text-xs group-hover:scale-110 transition"></i>
+                    <span class="text-xs text-gray-300 group-hover:text-white">${r.name}</span>
+                </button>
+            `).join('');
+        }
+
+        function selectRole(roleId, roleName) {
+            userRole = roleName;
+            document.getElementById('userRoleDisplay').innerHTML = `<i class="fa-solid fa-check-circle text-green-500 mr-1"></i> ${roleName}`;
+            updateActionButtons(roleId);
+            addCommunication('SISTEMA', 'all', `Assumiu função de ${roleName}.`, 'system');
+        }
+
+        function updateActionButtons(roleId) {
+            const actions = {
+                commander: ['Assumir Comando', 'Declarar Emergência', 'Solicitar Apoio Externo'],
+                operations: ['Ordenar Ataque Direto', 'Evacuar Área Quente', 'Acionar LGE'],
+                planning: ['Analisar Progresso', 'Prever Pluma Tóxica', 'Registrar Formulário 201'],
+                safety: ['Bloquear Via de Acesso', 'Exigir EPI Nível A', 'Paralisar Operação']
+            };
+            const container = document.getElementById('actionButtons');
+            if(!container) return;
+            const acts = actions[roleId] || ['Aguardar'];
+            container.innerHTML = acts.map(action => `
+                <button onclick="executeAction('${action}')" class="w-full py-1.5 px-2 bg-gray-900 hover:bg-ics-blue rounded border border-gray-700 text-left text-xs text-gray-300 hover:text-white transition flex items-center justify-between group">
+                    <span>${action}</span><i class="fas fa-chevron-right opacity-0 group-hover:opacity-100 transition text-[8px]"></i>
+                </button>
+            `).join('');
+        }
+
+        function executeAction(action) {
+            addCommunication(userRole.toUpperCase(), 'COMANDO', `Ação: ${action}`, 'normal');
+            decisions.push({action, time: simSeconds, role: userRole});
+            stressLevel = Math.max(stressLevel - 0.05, 0); // Boas ações reduzem stress levemente
+            updateMetrics();
+            
+            setTimeout(() => {
+                addCommunication('SISTEMA', userRole, `Ação "${action}" processada e transmitida.`, 'system');
+            }, 1500);
+        }
+
+        // --- GESTÃO DE RECURSOS E MAPA ---
+        function updateResourcePanel() {
+            // Atualiza a exibição no side-panel da esquerda (usado por ambos)
+            const panel = document.getElementById('resourcePanel');
+            panel.innerHTML = Object.entries(inventory).map(([key, data]) => {
+                const avail = data.total - data.used;
+                return `
+                <div class="flex justify-between items-center bg-gray-800 p-2 rounded border border-gray-700">
+                    <div class="flex items-center gap-2">
+                        ${iconsConfig[key]?.html || ''} <span class="text-xs text-gray-300 capitalize">${data.label}</span>
+                    </div>
+                    <span class="font-mono text-sm font-bold ${avail>0?'text-green-400':'text-red-500'}">${avail}/${data.total}</span>
+                </div>
+            `}).join('');
+
+            // Se modo aluno, atualiza botões para colocar no mapa
+            const stPanel = document.getElementById('student-resources-grid');
+            if(stPanel && currentMode === 'student') {
+                stPanel.innerHTML = Object.entries(inventory).map(([key, data]) => {
+                    const avail = data.total - data.used;
+                    return `
+                    <button onclick="deployResource('${key}')" class="${avail<=0 ? 'opacity-50 cursor-not-allowed bg-gray-900' : 'bg-gray-800 hover:bg-gray-700'} flex flex-col items-center justify-center gap-1 text-white p-2 rounded border border-gray-600 relative overflow-hidden transition-colors" ${avail<=0 ? 'disabled' : ''}>
+                        ${iconsConfig[key]?.html || ''}
+                        <span class="mt-1 text-[10px]">${data.label}</span>
+                    </button>
+                `}).join('');
+            }
+        }
+
+        function updateInstructorInventoryDisplay() {
+            const cPanel = document.getElementById('instructor-inventory-list');
+            if(cPanel && currentMode === 'instructor') {
+                cPanel.innerHTML = Object.entries(inventory).map(([key, data]) => `
+                    <div class="flex justify-between items-center bg-gray-900 p-1.5 rounded border border-gray-700">
+                        <span class="text-xs text-gray-400">${data.label}</span>
+                        <div class="flex items-center gap-1">
+                            <button onclick="changeInventory('${key}', -1)" class="w-5 h-5 bg-gray-700 hover:bg-red-600 rounded text-white flex items-center justify-center">-</button>
+                            <span class="font-mono text-white text-xs w-4 text-center">${data.total}</span>
+                            <button onclick="changeInventory('${key}', 1)" class="w-5 h-5 bg-gray-700 hover:bg-green-600 rounded text-white flex items-center justify-center">+</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function changeInventory(type, amount) {
+            if (inventory[type].total + amount >= inventory[type].used) { 
+                inventory[type].total += amount; if (inventory[type].total < 0) inventory[type].total = 0;
+                updateResourcePanel(); updateInstructorInventoryDisplay();
+            }
+        }
+
+        window.deployResource = function(type) {
+            if (inventory[type].used < inventory[type].total) {
+                inventory[type].used++; 
+                addMarker(type);
+                updateResourcePanel();
+                addCommunication('SISTEMA', userRole || 'ALUNO', `Viatura/Recurso de tipo "${inventory[type].label}" enviado para o terreno.`, 'system');
+            }
+        };
+
+        function addMarker(type) {
+            const config = iconsConfig[type];
+            const center = map.getCenter();
+            const marker = L.marker([center.lat + (Math.random()-0.5)*0.001, center.lng + (Math.random()-0.5)*0.001], {
+                icon: L.divIcon({ className: 'custom-leaflet-icon', html: config.html, iconSize: config.size, iconAnchor: config.anchor }), draggable: true
+            }).addTo(map);
+
+            marker.bindPopup(`<b>${config.popup}</b><br><button onclick="removeMarker(${markers.length}, '${type}')" class="mt-2 w-full bg-red-600 text-white px-2 py-1 rounded text-[10px]">Remover do Mapa</button>`);
+            marker._customId = markers.length; markers.push(marker);
+        }
+
+        window.removeMarker = function(id, type) {
+            const m = markers.find(m => m && m._customId === id);
+            if (m) { map.removeLayer(m); markers[id] = null; inventory[type].used--; updateResourcePanel(); }
+        };
+
+        // Zonas (Aluno)
+        window.enableZonePlacement = function(type, btnElement) {
+            if (currentMode !== 'student') return;
+            placementMode = type; document.getElementById('map').style.cursor = 'crosshair';
+            document.querySelectorAll('.btn-zone').forEach(btn => btn.classList.remove('ring-2', 'ring-white', 'bg-ics-blue'));
+            if(btnElement) btnElement.classList.add('ring-2', 'ring-white', 'bg-ics-blue');
+            showSimpleToast("Clique no mapa para posicionar a zona.");
+        };
+
+        window.updateRadius = function(type, value) {
+            if (studentZones[type]) {
+                studentZones[type].setRadius(parseInt(value));
+            } else if (currentMode === 'student') {
+                const config = zoneConfig[type];
+                studentZones[type] = L.circle(map.getCenter(), { color: config.color, fillColor: config.fillColor, fillOpacity: config.opacity, radius: parseInt(value) }).addTo(zonesLayer);
+            }
+        };
+
+        window.removeZone = function(type) {
+            if (studentZones[type]) { zonesLayer.removeLayer(studentZones[type]); studentZones[type] = null; }
+        };
+
+        // Cenografia Instrutor
+        window.togglePlacement = function(type, btn) {
+            if (currentMode !== 'instructor') return;
+            if (instructorPlacementMode === type) { instructorPlacementMode = null; document.getElementById('map').style.cursor = ''; btn.classList.remove('ring-2', 'ring-white', 'bg-ics-blue'); return; }
+            document.querySelectorAll('.btn-map-tool').forEach(b => b.classList.remove('ring-2', 'ring-white', 'bg-ics-blue'));
+            instructorPlacementMode = type; document.getElementById('map').style.cursor = 'crosshair'; btn.classList.add('ring-2', 'ring-white', 'bg-ics-blue');
+        }
+
+        function createScenarioElement(latlng, type, customScale = null, customProduct = null) {
+            let iconHtml = "", popupContent = "", size = [40, 40], anchor = [20, 20];
+            const scale = customScale !== null ? customScale : parseFloat(document.getElementById('object-scale')?.value || 1);
+
+            if (type === 'fire') {
+                const fs = 40 * scale; size = [fs, fs]; anchor = [fs/2, fs/2];
+                iconHtml = `<div style='font-size: ${fs}px; line-height: 1;' class='animate-pulse drop-shadow-[0_0_10px_rgba(255,0,0,0.8)]'>🔥</div>`;
+                popupContent = "<b>Fogo</b>";
+            } else if (type === 'smoke') {
+                const ss = 50 * scale; size = [ss * 1.5, ss * 1.5]; anchor = [size[0]/2, size[1]*0.75];
+                iconHtml = `<div class='smoke-wrapper' style='transform: rotate(${currentWindDeg}deg)'><div style='font-size: ${ss}px;' class='text-gray-500 animate-smoke'><i class='fa-solid fa-cloud'></i></div></div>`;
+                popupContent = "<b>Fumaça</b>";
+            } else if (type === 'hazmat') {
+                const prod = customProduct || document.getElementById('hazmat-product').value || "Produto N/D";
+                const hs = 40 * scale; size = [hs, hs]; anchor = [hs/2, hs/2];
+                iconHtml = `<div style='width: ${hs}px; height: ${hs}px; font-size: ${hs * 0.6}px;' class='text-green-500 bg-black rounded-full flex items-center justify-center border-2 border-green-500'><i class='fa-solid fa-biohazard'></i></div>`;
+                popupContent = `<b class='text-green-500'>Vazamento Hazmat</b><hr class='my-1 border-gray-600'><span class='font-mono font-bold bg-yellow-200 px-1 text-black text-xs'>${prod}</span><button onclick="consultarProdutoIA('${prod.replace(/'/g, "\\'")}')" class='mt-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white py-1 rounded text-[10px]'><i class='fa-solid fa-robot mr-1'></i> Consultar IA ERG</button>`;
+            } else if (['plane', 'car', 'train', 'building'].includes(type)) {
+                const icons = { 'plane': 'fa-plane', 'car': 'fa-car-burst', 'train': 'fa-train', 'building': 'fa-industry' };
+                const colors = { 'plane': '#38bdf8', 'car': '#ef4444', 'train': '#f97316', 'building': '#eab308' }; 
+                const sfs = 30 * scale; size = [40 * scale, 40 * scale]; anchor = [20 * scale, 20 * scale];
+                iconHtml = `<div style='font-size: ${sfs}px; color: ${colors[type]}; filter: drop-shadow(2px 2px 0px #000) drop-shadow(-2px -2px 0px #000); line-height: 1;'><i class='fa-solid ${icons[type]}'></i></div>`;
+                popupContent = `<b>Objeto de Cenário</b>`;
+            }
+
+            const el = L.marker(latlng, { icon: L.divIcon({ className: 'custom-leaflet-icon', html: iconHtml, iconSize: size, iconAnchor: anchor }), draggable: true }).addTo(map);
+            el.bindPopup(`<div class='text-center'>${popupContent}<br><button onclick="removeScenarioElement(${scenarioElements.length})" class="mt-2 bg-gray-700 hover:bg-gray-600 text-white py-1 px-2 rounded text-[10px]">Apagar</button></div>`);
+            el._sId = scenarioElements.length; scenarioElements.push(el);
+        }
+
+        window.removeScenarioElement = function(id) {
+            const el = scenarioElements.find(e => e && e._sId === id);
+            if (el) { map.removeLayer(el); scenarioElements[id] = null; }
+        };
+
+        // --- CLIMA ---
+        window.changeWind = function(deg, label) {
+            currentWindDeg = parseInt(deg);
+            document.getElementById('wind-arrow').style.transform = `rotate(${currentWindDeg}deg)`;
+            document.getElementById('wind-label').innerText = label;
+            document.querySelectorAll('.smoke-wrapper').forEach(el => el.style.transform = `rotate(${currentWindDeg}deg)`);
+            document.getElementById('wind-visual-layer').style.transform = `rotate(${currentWindDeg}deg)`;
+        };
+
+        window.toggleWindVisual = function(show) {
+            const layer = document.getElementById('wind-visual-layer');
+            if (show) layer.classList.add('wind-active'); else layer.classList.remove('wind-active');
+        };
+
+        // --- BUSCA (GEOCODING) ---
+        window.searchLocation = async function() {
+            const query = document.getElementById('location-search').value;
+            if (!query) return;
+            showSimpleToast("Buscando localização...");
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    map.flyTo([parseFloat(data[0].lat), parseFloat(data[0].lon)], 16);
+                    document.getElementById('currentScenarioName').innerText = `Busca: ${data[0].display_name.split(',')[0]}`;
+                } else showSimpleToast("Local não encontrado.");
+            } catch (e) { showSimpleToast("Erro ao buscar a localização."); }
+        };
+
+        // --- IA GROQ ---
+        function toggleAIChat() {
+            const chatWindow = document.getElementById('ai-chat-window');
+            if (chatWindow.classList.contains('ai-chat-closed')) {
+                chatWindow.classList.replace('ai-chat-closed', 'ai-chat-open');
+            } else {
+                chatWindow.classList.replace('ai-chat-open', 'ai-chat-closed');
+            }
+        }
+
+        let aiChatHistory = [{role: "system", content: "Você é um consultor IA C4I para o Sistema de Comando de Incidentes. Dê respostas curtas, em bullet points e muito diretas."}];
+        
+        async function sendToAI(predefinedMsg = null) {
+            const inputEl = document.getElementById('ai-input');
+            const message = predefinedMsg || inputEl.value.trim();
+            if (!message) return;
+
+            appendChatMessage(message, 'user');
+            inputEl.value = '';
+            aiChatHistory.push({ role: "user", content: message });
+            document.getElementById('ai-loading').classList.remove('hidden');
+
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: "llama3-8b-8192", messages: aiChatHistory, temperature: 0.3, max_tokens: 500 })
+                });
+
+                if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+
+                const data = await response.json();
+                const aiReply = data.choices[0].message.content;
+                
+                appendChatMessage(aiReply, 'ai');
+                aiChatHistory.push({ role: "assistant", content: aiReply });
+            } catch (error) {
+                appendChatMessage(`⚠️ Falha na comunicação Tática (API Key Expirada/Inválida).`, 'ai');
+                aiChatHistory.pop(); 
+            } finally {
+                document.getElementById('ai-loading').classList.add('hidden');
+            }
+        }
+
+        function appendChatMessage(text, sender) {
+            const container = document.getElementById('ai-chat-messages');
+            const cssClass = sender === 'user' ? 'msg-user' : 'msg-ai';
+            let formattedText = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            container.innerHTML += `<div class="${cssClass} p-2 px-3 shadow max-w-[90%] break-words text-xs">${formattedText}</div>`;
+            setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
+        }
+
+        window.consultarProdutoIA = function(produtoStr) {
+            const query = `Manual ERG para: "${produtoStr}". Informe: 1) Risco, 2) Distâncias, 3) EPI/Combate.`;
+            const chatWindow = document.getElementById('ai-chat-window');
+            if (chatWindow.classList.contains('ai-chat-closed')) toggleAIChat();
+            sendToAI(query);
+        };
+
+        // --- HELPERS ---
+        function showSimpleToast(msg) {
+            const t = document.getElementById('simple-toast');
+            t.innerText = msg; t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 3000);
+        }
+        function exitToMenu() {
+            if (confirm('Deseja encerrar e voltar ao ecrã inicial?')) location.reload();
+        }
+    </script>
+</body>
+</html>
