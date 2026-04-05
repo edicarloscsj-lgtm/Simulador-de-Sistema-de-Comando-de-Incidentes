@@ -72,6 +72,7 @@
 
     <!-- Tela de Login/Seleção de Modo -->
     <div id="loginScreen" class="fixed inset-0 z-[5000] flex items-center justify-center bg-ics-dark overflow-y-auto py-10">
+        
         <div class="w-full max-w-4xl p-8 flex flex-col items-center">
             <div class="text-center mb-10">
                 <div class="inline-flex items-center justify-center w-20 h-20 mb-4 bg-ics-red rounded-full animate-pulse-slow shadow-[0_0_20px_rgba(220,38,38,0.6)]">
@@ -82,8 +83,9 @@
                 <div class="mt-3 text-ics-amber font-mono text-sm tracking-widest uppercase">Simulador Tático Híbrido em Nuvem (Multiplayer)</div>
             </div>
 
+            <!-- Aviso se Firebase não estiver ativo -->
             <div id="offlineWarning" class="hidden bg-red-900 border border-red-500 text-white p-3 rounded-lg text-xs text-center mb-6 w-full max-w-2xl shadow-lg">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Erro de Conexão:</b> Não foi possível conectar ao banco de dados. O simulador rodará em modo local.
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Aviso de Conexão:</b> Operando em modo de rede de contingência (Local/Offline).
             </div>
 
             <!-- Botões Principais -->
@@ -93,7 +95,7 @@
                         <i class="fas fa-shield-alt text-3xl"></i>
                     </div>
                     <h3 class="text-2xl font-bold text-white mb-2">Modo Instrutor</h3>
-                    <p class="text-gray-400 text-sm">Controle o mapa, crie os seus próprios cenários e injete desafios na simulação em tempo real.</p>
+                    <p class="text-gray-400 text-sm">Controle o mapa, crie cenários, configure o clima e injete desafios na simulação em tempo real.</p>
                     <div class="mt-4 flex items-center text-ics-blue font-bold">
                         <i class="fas fa-key mr-2"></i><span class="text-sm">Criar Operação (Nova Sala)</span>
                     </div>
@@ -134,17 +136,17 @@
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <div class="bg-gray-900 p-4 rounded border border-gray-700">
                          <h4 class="text-ics-amber font-bold mb-2 text-lg"><i class="fa-solid fa-user-tie mr-2"></i>O Instrutor</h4>
-                         <p class="text-sm text-gray-400 leading-relaxed">Carrega cenários (ou cria os seus próprios), partilha o código de sala gerado e, em tempo real, dita a direção do vento e injeta complicações na operação que surgem instantaneamente no ecrã dos alunos.</p>
+                         <p class="text-sm text-gray-400 leading-relaxed">Inicia a sala de instrução, cria ameaças (fogo, fumo, químicos) no mapa, dita as condições meteorológicas e introduz injeções críticas de ocorrências no ecrã dos alunos via rádio.</p>
                      </div>
                      <div class="bg-gray-900 p-4 rounded border border-gray-700">
                          <h4 class="text-ics-blue font-bold mb-2 text-lg"><i class="fa-solid fa-map-location-dot mr-2"></i>A Equipa (Alunos)</h4>
-                         <p class="text-sm text-gray-400 leading-relaxed">Entram com o código partilhado pelo instrutor. Podem ativar a Grade Cartográfica (Grid) para coordenar pelo rádio, delimitar as Zonas de isolamento e despachar viaturas estrategicamente.</p>
+                         <p class="text-sm text-gray-400 leading-relaxed">Entram com o código gerado pelo instrutor. Lêm a ordem de operação (Briefing), ativam a Grade Cartográfica para comunicação tática, desenham as zonas de perigo e distribuem as viaturas no mapa.</p>
                      </div>
                  </div>
                  
                  <!-- Doação PIX -->
                  <div class="mt-6 border-t border-gray-700 pt-4 flex flex-col md:flex-row items-center justify-between">
-                     <p class="text-xs text-gray-500 mb-2 md:mb-0">Sistema C4I desenvolvido para potenciar a resposta a emergências reais.</p>
+                     <p class="text-xs text-gray-500 mb-2 md:mb-0">Sistema C4I focado no apoio interativo ao Sistema de Comando de Incidentes.</p>
                      <div class="bg-gray-900 border border-gray-600 px-4 py-2 rounded-lg flex items-center gap-3 hover:border-teal-500 transition-colors">
                          <i class="fa-brands fa-pix text-teal-400 text-lg"></i>
                          <span class="text-xs text-gray-300">Apoie o projeto (PIX): <b class="text-white font-mono tracking-wider ml-1 text-sm">71992756180</b></span>
@@ -154,7 +156,7 @@
         </div>
     </div>
 
-    <!-- Interface Principal -->
+    <!-- Interface Principal (Operacional) -->
     <div id="mainInterface" class="hidden h-full flex flex-col w-full relative">
         
         <!-- Header -->
@@ -165,7 +167,7 @@
                     <span class="font-bold text-xl tracking-wider">ICS PRO</span>
                 </div>
                 <div class="hidden md:flex px-3 py-1.5 bg-gray-900 border border-gray-600 rounded text-xs font-mono shadow-inner items-center">
-                    <span class="text-gray-400 mr-2 text-[10px]">SALA (NUVEM):</span>
+                    <span class="text-gray-400 mr-2 text-[10px]">SALA:</span>
                     <span id="headerRoomCode" class="text-green-400 font-bold tracking-widest text-sm">---</span>
                 </div>
                 <div class="h-6 w-px bg-gray-600 hidden md:block"></div>
@@ -186,7 +188,7 @@
             </div>
 
             <div class="flex items-center space-x-3">
-                <button onclick="window.exitToMenu()" class="p-2 bg-gray-700 rounded hover:bg-ics-red transition flex items-center gap-2 px-3" title="Sair para o Menu">
+                <button onclick="window.exitToMenu()" class="bg-red-700 hover:bg-red-600 text-white rounded transition flex items-center gap-2 px-4 py-2" title="Sair/Encerrar Simulação">
                     <i class="fas fa-sign-out-alt"></i> <span class="text-xs font-bold hidden md:block">Encerrar / Sair</span>
                 </button>
             </div>
@@ -260,6 +262,7 @@
 
             <!-- Sidebar Direita -->
             <aside class="w-80 bg-gray-900 border-l border-gray-700 flex flex-col shrink-0 z-40 overflow-y-auto no-scrollbar" id="controlPanel">
+                <!-- Conteúdo Renderizado via JS -->
             </aside>
         </div>
     </div>
@@ -270,7 +273,7 @@
             <div class="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-800">
                 <h2 class="text-2xl font-bold text-white"><i class="fa-solid fa-map-location-dot text-ics-blue mr-2"></i>Selecione ou Crie um Cenário</h2>
                 <div class="flex gap-2">
-                    <button onclick="window.startScenario('livre')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition border border-gray-500">Ir para Sandbox</button>
+                    <button onclick="window.startScenario('livre')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition border border-gray-500">Iniciar Sandbox Livre</button>
                 </div>
             </div>
             <div class="p-6 overflow-y-auto flex-1 bg-gray-900">
@@ -294,7 +297,6 @@
                     <label class="text-xs text-gray-400 font-bold mb-1 block">Descrição e Objetivos</label>
                     <textarea id="customScenDesc" rows="3" placeholder="Detalhes do incidente..." class="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white focus:border-ics-blue outline-none"></textarea>
                 </div>
-                
                 <div class="flex gap-2 mt-2">
                     <button onclick="document.getElementById('saveCustomScenarioModal').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded transition-colors text-sm">Cancelar</button>
                     <button onclick="window.saveCustomScenario()" class="flex-1 bg-ics-blue hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Salvar Cenário</button>
@@ -307,14 +309,14 @@
         <div class="bg-ics-panel rounded-xl max-w-2xl w-full border-l-4 border-ics-amber shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-gray-800 p-5 border-b border-gray-700 flex items-center gap-3">
                 <i class="fa-solid fa-clipboard-list text-3xl text-ics-amber animate-pulse"></i>
-                <div><h2 class="text-xl font-bold text-white tracking-wider">ORDEM DE OPERAÇÃO (CENÁRIO)</h2><h3 id="briefingTitle" class="text-sm text-gray-400 font-mono uppercase"></h3></div>
+                <div><h2 class="text-xl font-bold text-white tracking-wider">ORDEM DE OPERAÇÃO (BRIEFING)</h2><h3 id="briefingTitle" class="text-sm text-gray-400 font-mono uppercase"></h3></div>
             </div>
             <div class="p-6 bg-gray-900">
-                <h4 class="text-ics-blue font-bold mb-2 text-sm uppercase">Descrição do Incidente</h4>
+                <h4 class="text-ics-blue font-bold mb-2 text-sm uppercase">Situação Atual</h4>
                 <div class="bg-gray-800 p-4 rounded border border-gray-700 mb-6"><p id="briefingDescription" class="text-sm text-gray-200 leading-relaxed"></p></div>
-                <h4 class="text-ics-amber font-bold mb-2 text-sm uppercase">Objetivos Táticos Iniciais</h4>
+                <h4 class="text-ics-amber font-bold mb-2 text-sm uppercase">Objetivos Táticos Prioritários</h4>
                 <ul id="briefingObjectives" class="list-none space-y-2 mb-6 text-sm text-gray-300"></ul>
-                <button onclick="document.getElementById('briefingModal').classList.add('hidden')" class="w-full bg-ics-amber hover:bg-amber-600 text-black font-bold py-4 rounded-lg transition-colors uppercase tracking-wider text-sm shadow-[0_0_15px_rgba(217,119,6,0.3)]">Compreendido - Iniciar Operação</button>
+                <button onclick="document.getElementById('briefingModal').classList.add('hidden')" class="w-full bg-ics-amber hover:bg-amber-600 text-black font-bold py-4 rounded-lg transition-colors uppercase tracking-wider text-sm shadow-[0_0_15px_rgba(217,119,6,0.3)]">Compreendido - Assumir Posição</button>
             </div>
         </div>
     </div>
@@ -329,9 +331,8 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, arrayUnion, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // --- INICIALIZAÇÃO FIREBASE PROTEGIDA ---
-        // Configuração Padrão do Usuário
-        const fallbackConfig = {
+        // --- CONFIGURAÇÃO FIREBASE EMBUTIDA (GARANTE FUNCIONAMENTO EXTERNO) ---
+        const defaultFirebaseConfig = {
             apiKey: "AIzaSyAyfIv417O-Ceg1aiRdubBGxxTSRLar_nI",
             authDomain: "simulador-sci.firebaseapp.com",
             projectId: "simulador-sci",
@@ -341,34 +342,33 @@
             measurementId: "G-FPKG4Z47WT"
         };
 
-        let firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-        let finalConfig = null;
-        let currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'simulador-sci';
-        let isCanvasEnv = false;
-
-        if (firebaseConfigRaw) {
-            try {
-                finalConfig = JSON.parse(firebaseConfigRaw);
-                isCanvasEnv = true;
-            } catch(e) {}
-        } else {
-            finalConfig = fallbackConfig;
-        }
-
         let isFirebaseActive = false;
         let db = null, auth = null, app = null;
         let currentUser = null;
         let roomUnsubscribe = null;
         let authReadyPromise = null;
+        let currentAppId = 'simulador-sci';
+        let isCanvasEnv = false;
+
+        let configToUse = defaultFirebaseConfig;
 
         try {
-            if (finalConfig && Object.keys(finalConfig).length > 0) {
-                app = initializeApp(finalConfig);
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                configToUse = JSON.parse(__firebase_config);
+                currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                isCanvasEnv = true;
+            }
+
+            if (configToUse && Object.keys(configToUse).length > 0) {
+                app = initializeApp(configToUse);
                 auth = getAuth(app);
                 db = getFirestore(app);
                 isFirebaseActive = true;
             }
-        } catch (e) { console.warn("Firebase Init Erro:", e); }
+        } catch (e) {
+            console.warn("Erro ao iniciar Firebase:", e);
+            document.getElementById('offlineWarning').classList.remove('hidden');
+        }
 
         if (isFirebaseActive) {
             authReadyPromise = new Promise((resolve) => {
@@ -379,9 +379,11 @@
                         } else {
                             await signInAnonymously(auth);
                         }
-                    } catch(e) {
-                        console.error("Auth Error, falling back to Anonymously:", e);
-                        try { await signInAnonymously(auth); } catch(err) {}
+                    } catch(e) { 
+                        console.error("Falha ao iniciar autenticação Firebase:", e); 
+                        if (e.code === 'auth/configuration-not-found') {
+                            console.warn("Lembre-se de ativar o provedor 'Anônimo' no painel Authentication do seu Firebase Console.");
+                        }
                     }
                 };
                 initAuth();
@@ -390,20 +392,17 @@
                     if(user) { resolve(true); unsub(); }
                 });
             });
-        } else {
-            document.getElementById('offlineWarning').classList.remove('hidden');
         }
 
-        // Função de envio seguro para a base de dados
+        // Função de Sincronização Cloud/Local
         async function pushUpdateToDB(updateObj) {
             if(!isFirebaseActive || !currentUser || !window.currentRoomCode) {
-                // Modo Local/Offline Fallback
+                // Fallback Local
                 if(!window.currentDbState) window.currentDbState = {};
                 for(let key in updateObj) {
                     const keys = key.split('.');
-                    if(keys.length === 1) {
-                        window.currentDbState[key] = updateObj[key];
-                    } else {
+                    if(keys.length === 1) { window.currentDbState[key] = updateObj[key]; } 
+                    else {
                         let obj = window.currentDbState;
                         for(let i=0; i<keys.length-1; i++) {
                             if(!obj[keys[i]]) obj[keys[i]] = {};
@@ -430,7 +429,7 @@
         window.map = null;
         window.gridLayer = null;
         window.currentDbState = null; 
-        window.studentHasSeenBriefing = false; // Flag para garantir que o briefing aparece
+        window.studentHasSeenBriefing = false; 
         
         let simTimer = null;
         let simSeconds = 0;
@@ -500,11 +499,12 @@
             riot: { title: 'Tumulto Civil', description: 'Populares em pânico invadiram o perímetro seguro da operação.', urgency: 'high' }
         };
 
-        // --- SINCRONIZAÇÃO NUVEM PARA MAPA LOCAL ---
+        // --- SINCRONIZAÇÃO DE ESTADO ---
         function applyRemoteState(data) {
             window.currentDbState = data; 
             
             document.getElementById('currentScenarioName').innerText = data.scenarioTitle || 'Simulação Livre';
+            
             if(data.mapCenter && typeof data.mapCenter.lat === 'number' && typeof data.mapCenter.lng === 'number' && !isNaN(data.mapCenter.lat) && !isNaN(data.mapCenter.lng) && window.map) {
                 const curCenter = window.map.getCenter();
                 if(Math.abs(curCenter.lat - data.mapCenter.lat) > 0.01) {
@@ -521,7 +521,7 @@
                 else document.getElementById('wind-visual-layer').classList.remove('wind-active');
             }
 
-            // Exibir Briefing para o Aluno (Uma única vez ao receber os dados)
+            // Exibir Briefing para o Aluno (Uma única vez ao receber a base de dados)
             if (window.currentMode === 'student' && !window.studentHasSeenBriefing && data.scenarioTitle && data.scenarioTitle !== 'Modo Livre') {
                 window.showBriefing(
                     data.scenarioTitle,
@@ -531,6 +531,7 @@
                 window.studentHasSeenBriefing = true;
             }
 
+            // Sync Zonas
             const dbZones = data.zones || {};
             ['hot', 'warm', 'cold'].forEach(t => {
                 const zData = dbZones[t];
@@ -551,15 +552,18 @@
             if (studentZones.warm) studentZones.warm.bringToFront();
             if (studentZones.hot) studentZones.hot.bringToFront();
 
+            // Sync Marcadores
             syncMarkersLocally(data.elements || {}, localElements, instructorLayer, window.currentMode === 'instructor');
             syncMarkersLocally(data.resources || {}, localResources, studentLayer, window.currentMode === 'student');
 
+            // Sync Comms
             const dbComms = data.communications || [];
             if (dbComms.length > renderedComms) {
                 for (let i = renderedComms; i < dbComms.length; i++) { renderChatMessage(dbComms[i]); }
                 renderedComms = dbComms.length;
             }
 
+            // Sync Inventário
             Object.keys(inventoryBase).forEach(k => inventoryBase[k].used = 0);
             Object.values(data.resources || {}).forEach(res => { if(inventoryBase[res.type]) inventoryBase[res.type].used++; });
             if(data.inventoryTotals) {
@@ -569,7 +573,7 @@
             if(window.currentMode === 'instructor') updateInstructorInventoryDisplay();
             
             document.getElementById('connectionDot').classList.replace('bg-red-500', 'bg-green-500');
-            document.getElementById('connectionText').innerText = isFirebaseActive ? "Sincronizado Nuvem" : "Modo Local/Offline";
+            document.getElementById('connectionText').innerText = isFirebaseActive ? "Sincronizado Nuvem" : "Modo Local";
         }
 
         function syncMarkersLocally(dbMap, localMap, layerGroup, isOwner) {
@@ -725,7 +729,6 @@
                         zones: {hot:null, warm:null, cold:null}, elements: {}, resources: {}, communications: [], inventoryTotals: { pc: 1, e: 1, h: 1, fire: 5, foam: 3, ship: 2, amb: 3 }
                     };
                     applyRemoteState(window.currentDbState);
-                    window.showSimpleToast("Modo Offline Local. Configura o Firebase para Multiplayer.");
                 }
 
                 setupInstructorModeUI();
@@ -768,7 +771,7 @@
             }
             
             setTimeout(() => {
-                addLocalComm('SISTEMA', 'REDE GERAL', `Novo terminal conectado à sala [${window.currentRoomCode}].`, 'system');
+                addLocalComm('SISTEMA', 'REDE GERAL', `Terminal ligado à sala [${window.currentRoomCode}].`, 'system');
                 window.showSimpleToast(`Conectado à sala ${window.currentRoomCode}`);
             }, 1000);
         };
@@ -790,7 +793,7 @@
             document.getElementById('roomCodeInput').value = '';
         };
 
-        // BOTÃO DE SAIR CORRIGIDO E LIMPO
+        // --- BOTÃO DE SAIR CORRIGIDO E LIMPO ---
         window.exitToMenu = function() {
             if (confirm('Encerrar as operações e sair da sala tática?')) {
                 // Esconder Interface / Mostrar Login
@@ -809,7 +812,7 @@
                 window.currentDbState = null;
                 window.studentHasSeenBriefing = false;
                 
-                // Limpar Mapa (Para não deixar lixo para o próximo acesso)
+                // Limpar Mapa
                 if(window.map) {
                     if(instructorLayer) instructorLayer.clearLayers();
                     if(studentLayer) studentLayer.clearLayers();
@@ -821,7 +824,7 @@
                 localResources = {};
                 studentZones = { hot: null, warm: null, cold: null };
                 
-                // Reset Temporizador e Comms
+                // Reset Comms
                 if (simTimer) { clearInterval(simTimer); simTimer = null; }
                 simSeconds = 0;
                 document.getElementById('simTime').textContent = "00:00:00";
@@ -830,7 +833,7 @@
             }
         };
 
-        // --- FUNÇÕES INTERFACE DE USUÁRIO (UI) ---
+        // --- FUNÇÕES DE CONSTRUÇÃO DE UI ---
         function setupInstructorModeUI() {
             document.getElementById('controlPanel').innerHTML = `
                 <div class="p-4 border-b border-gray-700 bg-gray-800 shrink-0 flex justify-between items-center">
@@ -925,15 +928,10 @@
             if (inventoryBase[type].total + amount >= inventoryBase[type].used) { 
                 const newTotal = Math.max(0, inventoryBase[type].total + amount);
                 pushUpdateToDB({ [`inventoryTotals.${type}`]: newTotal });
-                
                 if(!isFirebaseActive) {
-                   inventoryBase[type].total = newTotal;
-                   updateUIInventory();
-                   window.updateInstructorInventoryDisplay();
+                   inventoryBase[type].total = newTotal; updateUIInventory(); window.updateInstructorInventoryDisplay();
                 }
-            } else {
-                window.showSimpleToast("Não pode remover recursos já enviados para o mapa.");
-            }
+            } else { window.showSimpleToast("Recursos já estão em uso."); }
         };
 
         function setupStudentModeUI() {
@@ -995,9 +993,7 @@
             document.getElementById('scenarioModal').classList.remove('hidden');
         };
 
-        window.openSaveScenarioModal = function() {
-            document.getElementById('saveCustomScenarioModal').classList.remove('hidden');
-        };
+        window.openSaveScenarioModal = function() { document.getElementById('saveCustomScenarioModal').classList.remove('hidden'); };
 
         window.saveCustomScenario = function() {
             const title = document.getElementById('customScenTitle').value;
@@ -1005,15 +1001,9 @@
             if(!title) return window.showSimpleToast("O Título do Cenário é obrigatório.");
 
             const newScen = {
-                id: 'custom_' + Date.now(),
-                title: title,
-                description: desc || 'Cenário personalizado gerado pelo instrutor.',
-                difficulty: 'Personalizado',
-                lat: window.map.getCenter().lat,
-                lng: window.map.getCenter().lng,
-                zoom: window.map.getZoom(),
-                windDeg: window.currentDbState?.windDeg || 0,
-                windLabel: window.currentDbState?.windLabel || 'Norte (N)',
+                id: 'custom_' + Date.now(), title: title, description: desc || 'Cenário personalizado gerado pelo instrutor.', difficulty: 'Personalizado',
+                lat: window.map.getCenter().lat, lng: window.map.getCenter().lng, zoom: window.map.getZoom(),
+                windDeg: window.currentDbState?.windDeg || 0, windLabel: window.currentDbState?.windLabel || 'Norte (N)',
                 objectives: ['Gerir ocorrência de forma proativa', 'Estabelecer perímetros seguros', 'Sincronizar comunicações multi-agência'],
                 inventory: window.currentDbState?.inventoryTotals || { pc: 1, e: 1, h: 1, fire: 5, foam: 3, ship: 0, amb: 5 },
                 elements: []
@@ -1023,10 +1013,7 @@
                 for(let k in window.currentDbState.elements) {
                     let el = window.currentDbState.elements[k];
                     if (typeof el.lat === 'number' && typeof el.lng === 'number' && !isNaN(el.lat) && !isNaN(el.lng)) {
-                        newScen.elements.push({
-                            type: el.type, latOffset: el.lat - newScen.lat, lngOffset: el.lng - newScen.lng,
-                            scale: el.scale || 1, product: el.product || ''
-                        });
+                        newScen.elements.push({ type: el.type, latOffset: el.lat - newScen.lat, lngOffset: el.lng - newScen.lng, scale: el.scale || 1, product: el.product || '' });
                     }
                 }
             }
