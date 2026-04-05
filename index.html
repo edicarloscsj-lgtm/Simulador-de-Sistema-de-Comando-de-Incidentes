@@ -70,9 +70,14 @@
 </head>
 <body class="h-screen overflow-hidden font-sans flex flex-col relative">
 
-    <!-- Ecrã de Login/Seleção de Modo -->
+    <!-- Tela de Login/Seleção de Modo -->
     <div id="loginScreen" class="fixed inset-0 z-[5000] flex items-center justify-center bg-ics-dark overflow-y-auto py-10">
         
+        <!-- Botão de Configuração de Servidor Firebase (Para Google Sites/Vercel) -->
+        <button onclick="window.openFirebaseSettings()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700 text-xs flex items-center gap-2">
+            <i class="fa-solid fa-server"></i> Configurar Servidor
+        </button>
+
         <div class="w-full max-w-4xl p-8 flex flex-col items-center">
             <div class="text-center mb-10">
                 <div class="inline-flex items-center justify-center w-20 h-20 mb-4 bg-ics-red rounded-full animate-pulse-slow shadow-[0_0_20px_rgba(220,38,38,0.6)]">
@@ -83,7 +88,7 @@
                 <div class="mt-3 text-ics-amber font-mono text-sm tracking-widest uppercase">Simulador Tático Híbrido em Nuvem (Multiplayer)</div>
             </div>
 
-            <!-- Aviso de Erros do Firebase -->
+            <!-- Aviso se Firebase não estiver ativo -->
             <div id="offlineWarning" class="hidden bg-red-900 border border-red-500 text-white p-3 rounded-lg text-sm text-center mb-6 w-full max-w-2xl shadow-lg">
                 <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Aviso de Conexão:</b> Operando em modo local.
             </div>
@@ -326,6 +331,22 @@
 
     <div id="simple-toast" class="absolute top-20 left-1/2 transform -translate-x-1/2 z-[9000] bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded shadow-lg text-sm transition-opacity duration-300 opacity-0 pointer-events-none text-center"></div>
 
+    <!-- Modal Configuração Firebase (Para Hospedagem Externa) -->
+    <div id="firebaseSettingsModal" class="hidden fixed inset-0 z-[8000] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-ics-panel rounded-xl max-w-lg w-full border border-gray-600 shadow-2xl p-6">
+            <h2 class="text-xl font-bold text-white mb-2"><i class="fa-solid fa-server text-ics-blue mr-2"></i>Configurar Servidor Firebase</h2>
+            <p class="text-xs text-gray-400 mb-4 leading-relaxed">Cole aqui o JSON de configuração do seu projeto Firebase para garantir que as operações em tempo real funcionam em ambientes externos como a Vercel.</p>
+            <textarea id="firebaseConfigInput" rows="6" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-xs text-white font-mono mb-4" placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "...", "storageBucket": "...", "messagingSenderId": "...", "appId": "..." }'></textarea>
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('firebaseSettingsModal').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded transition-colors text-sm">Cancelar</button>
+                <button onclick="window.saveFirebaseConfig()" class="flex-1 bg-ics-blue hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Salvar e Aplicar</button>
+            </div>
+            <div class="mt-4 pt-3 border-t border-gray-700 text-center">
+                <button onclick="window.clearFirebaseConfig()" class="text-xs text-red-400 hover:text-red-300">Limpar Configuração</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts Leaflet e Firebase (ES Modules) -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
@@ -334,7 +355,34 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, arrayUnion, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // --- CONFIGURAÇÃO FIREBASE EMBUTIDA (GARANTE FUNCIONAMENTO EXTERNO NA VERCEL) ---
+        // --- SISTEMA DE CONFIGURAÇÃO FIREBASE EXTERNO ---
+        window.openFirebaseSettings = function() {
+            const saved = localStorage.getItem('customFirebaseConfig');
+            if (saved) document.getElementById('firebaseConfigInput').value = saved;
+            document.getElementById('firebaseSettingsModal').classList.remove('hidden');
+        };
+        
+        window.saveFirebaseConfig = function() {
+            const val = document.getElementById('firebaseConfigInput').value.trim();
+            if (val) {
+                try {
+                    JSON.parse(val); 
+                    localStorage.setItem('customFirebaseConfig', val);
+                    document.getElementById('firebaseSettingsModal').classList.add('hidden');
+                    window.showSimpleToast("Configuração salva! Recarregando...");
+                    setTimeout(() => { window.location.reload(); }, 1500);
+                } catch(e) { window.showSimpleToast("JSON Inválido! Copie exatamente do Firebase."); }
+            }
+        };
+
+        window.clearFirebaseConfig = function() {
+            localStorage.removeItem('customFirebaseConfig');
+            document.getElementById('firebaseSettingsModal').classList.add('hidden');
+            window.showSimpleToast("Configurações limpas. Recarregando...");
+            setTimeout(() => { window.location.reload(); }, 1500);
+        };
+
+        // --- CONFIGURAÇÃO FIREBASE EMBUTIDA ---
         const defaultFirebaseConfig = {
             apiKey: "AIzaSyAyfIv417O-Ceg1aiRdubBGxxTSRLar_nI",
             authDomain: "simulador-sci.firebaseapp.com",
@@ -345,66 +393,58 @@
             measurementId: "G-FPKG4Z47WT"
         };
 
-        let firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-        let finalConfig = null;
-        let currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'simulador-sci';
-        let isCanvasEnv = false;
-
-        if (firebaseConfigRaw) {
-            try {
-                finalConfig = JSON.parse(firebaseConfigRaw);
-                isCanvasEnv = true;
-            } catch(e) {}
-        } else {
-            finalConfig = defaultFirebaseConfig;
-        }
-
         let isFirebaseActive = false;
         let db = null, auth = null, app = null;
         let currentUser = null;
         let roomUnsubscribe = null;
         let authReadyPromise = null;
+        let currentAppId = 'simulador-sci';
+        let isCanvasEnv = false;
+
+        let configToUse = defaultFirebaseConfig;
 
         try {
-            if (finalConfig && Object.keys(finalConfig).length > 0) {
-                app = initializeApp(finalConfig);
+            // Tenta obter configurações personalizadas ou do Canvas
+            const customConfigRaw = localStorage.getItem('customFirebaseConfig');
+            if (customConfigRaw && customConfigRaw.trim() !== '') {
+                configToUse = JSON.parse(customConfigRaw);
+                currentAppId = configToUse.projectId || 'simulador-sci';
+            } else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                configToUse = JSON.parse(__firebase_config);
+                currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                isCanvasEnv = true;
+            }
+
+            // Saneamento do App ID para evitar paths de DB quebrados
+            if (currentAppId && currentAppId.includes('//')) {
+                currentAppId = currentAppId.replace(/[^a-zA-Z0-9-]/g, '_');
+            }
+
+            if (configToUse && Object.keys(configToUse).length > 0) {
+                app = initializeApp(configToUse);
                 auth = getAuth(app);
                 db = getFirestore(app);
                 isFirebaseActive = true;
             }
-        } catch (e) { 
-            console.warn("Firebase Init Erro:", e); 
+        } catch (e) {
+            console.warn("Erro ao iniciar Firebase:", e);
+            document.getElementById('offlineWarning').classList.remove('hidden');
         }
 
         if (isFirebaseActive) {
             authReadyPromise = new Promise((resolve) => {
                 const initAuth = async () => {
                     try {
-                        // Verifica se está no Canvas com token. Se estiver na Vercel, o token não existe e usa login anónimo.
                         if (isCanvasEnv && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                             await signInWithCustomToken(auth, __initial_auth_token);
                         } else {
                             await signInAnonymously(auth);
                         }
-                    } catch(e) {
-                        console.error("Auth Error, a tentar fallback Anónimo:", e);
-                        try { 
-                            await signInAnonymously(auth); 
-                        } catch(err) {
-                            // Este é o erro crítico se o "Login Anónimo" não estiver ativado no Firebase
-                            let errorMsg = '<b>Erro de Conexão:</b> Operando em modo de rede de contingência (Local/Offline).';
-                            
-                            if (err.code === 'auth/operation-not-allowed') {
-                                errorMsg = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Erro Crítico:</b> Para usar a Vercel, ative o "Login Anónimo" no separador Authentication do Firebase!';
-                            } else if (err.code === 'auth/configuration-not-found') {
-                                errorMsg = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Erro de Configuração:</b> Vá ao Firebase Console > Authentication e clique em "Get Started" (Começar) para ativar o serviço.';
-                            }
-                            
-                            const warnDiv = document.getElementById('offlineWarning');
-                            if (warnDiv) {
-                                warnDiv.innerHTML = errorMsg;
-                                warnDiv.classList.remove('hidden');
-                            }
+                    } catch(e) { 
+                        console.error("Falha ao iniciar autenticação Firebase:", e); 
+                        if (e.code === 'auth/configuration-not-found') {
+                            console.warn("Lembre-se de ativar o provedor 'Anônimo' no painel Authentication do seu Firebase Console.");
+                            document.getElementById('offlineWarning').classList.remove('hidden');
                         }
                     }
                 };
@@ -414,20 +454,19 @@
                     if(user) { resolve(true); unsub(); }
                 });
             });
-        } else {
-            document.getElementById('offlineWarning').classList.remove('hidden');
         }
 
-        // Função de envio seguro para a base de dados
+        // Função de Sincronização Cloud/Local
         async function pushUpdateToDB(updateObj) {
-            if(!isFirebaseActive || !currentUser || !window.currentRoomCode) {
-                // Modo Local/Offline Fallback
+            const safeCode = window.currentRoomCode ? window.currentRoomCode.replace(/[^A-Z0-9]/g, '') : null;
+            
+            if(!isFirebaseActive || !currentUser || !safeCode) {
+                // Fallback Local
                 if(!window.currentDbState) window.currentDbState = {};
                 for(let key in updateObj) {
                     const keys = key.split('.');
-                    if(keys.length === 1) {
-                        window.currentDbState[key] = updateObj[key];
-                    } else {
+                    if(keys.length === 1) { window.currentDbState[key] = updateObj[key]; } 
+                    else {
                         let obj = window.currentDbState;
                         for(let i=0; i<keys.length-1; i++) {
                             if(!obj[keys[i]]) obj[keys[i]] = {};
@@ -440,7 +479,7 @@
                 return;
             }
             try {
-                const roomRef = doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', window.currentRoomCode);
+                const roomRef = doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode);
                 await setDoc(roomRef, updateObj, { merge: true });
             } catch(e) { console.error("Falha a sincronizar:", e); }
         }
@@ -748,7 +787,8 @@
                 
                 if(isFirebaseActive) {
                     if(authReadyPromise) await authReadyPromise; 
-                    await setDoc(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', window.currentRoomCode), {
+                    const safeCode = window.currentRoomCode.replace(/[^A-Z0-9]/g, '');
+                    await setDoc(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode), {
                         createdAt: Date.now(), scenarioTitle: 'Modo Livre', windDeg: 0, windLabel: 'Norte (N)', windVisual: false,
                         description: 'Operação de treinamento em Modo Livre.', objectives: ['Avaliar o perímetro'],
                         mapCenter: {lat: -23.5505, lng: -46.6333, zoom: 15},
@@ -776,9 +816,17 @@
         };
 
         window.joinRoom = async function() {
-            const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
-            if (code.length < 4) {
-                const input = document.getElementById('roomCodeInput'); input.classList.add('border-red-500'); setTimeout(() => input.classList.remove('border-red-500'), 1000); return;
+            const rawCode = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+            
+            // Impede strings quebras, paths longos ou URLS da Vercel para impedir erros de firebase
+            const code = rawCode.replace(/[^A-Z0-9]/g, '');
+            
+            if (code.length < 4 || rawCode.includes('HTTP') || rawCode.includes('/')) {
+                const input = document.getElementById('roomCodeInput'); 
+                input.classList.add('border-red-500'); 
+                setTimeout(() => input.classList.remove('border-red-500'), 1000); 
+                window.showSimpleToast("Código inválido! Digite apenas a senha alfanumérica da sala.");
+                return;
             }
             
             window.currentRoomCode = code;
@@ -787,7 +835,8 @@
             
             if(isFirebaseActive) {
                 if(authReadyPromise) await authReadyPromise; 
-                const snap = await getDoc(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', code));
+                const safeCode = code;
+                const snap = await getDoc(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode));
                 if(!snap.exists()) { 
                     window.showSimpleToast("Código de Sala Inválido ou Expirado."); 
                     window.exitToMenu();
@@ -817,7 +866,10 @@
             document.getElementById('connectionDot').classList.replace('bg-green-500', 'bg-red-500');
             document.getElementById('connectionText').innerText = "Sincronizando...";
             
-            roomUnsubscribe = onSnapshot(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', code), (snap) => {
+            const safeCode = code.replace(/[^A-Z0-9]/g, '');
+            if(!safeCode) return;
+            
+            roomUnsubscribe = onSnapshot(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode), (snap) => {
                 if(snap.exists()) applyRemoteState(snap.data());
             }, (error) => { console.error("Snapshot Error", error); window.showSimpleToast("Erro de rede."); });
         }
