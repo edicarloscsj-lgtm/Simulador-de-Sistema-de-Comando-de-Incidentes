@@ -74,7 +74,7 @@
     <div id="loginScreen" class="fixed inset-0 z-[5000] flex items-center justify-center bg-ics-dark overflow-y-auto py-10">
         
         <!-- Botão de Configuração de Servidor Firebase (Para Google Sites/Vercel) -->
-        <button onclick="window.openFirebaseSettings()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700 text-xs flex items-center gap-2">
+        <button onclick="window.openFirebaseSettings()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700 text-xs flex items-center gap-2 shadow-lg">
             <i class="fa-solid fa-server"></i> Configurar Servidor
         </button>
 
@@ -90,7 +90,8 @@
 
             <!-- Aviso se Firebase não estiver ativo -->
             <div id="offlineWarning" class="hidden bg-red-900 border border-red-500 text-white p-3 rounded-lg text-sm text-center mb-6 w-full max-w-2xl shadow-lg">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Aviso de Conexão:</b> Operando em modo local.
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Aviso de Conexão:</b> Operando em modo de rede de contingência (Local/Offline). 
+                <br><span class="text-xs text-red-200">Se a sincronização falhar, certifique-se de que o "Login Anónimo" está ativado no Firebase Console e que o domínio da Vercel foi autorizado na seção Authentication.</span>
             </div>
 
             <!-- Botões Principais -->
@@ -193,10 +194,10 @@
             </div>
 
             <div class="flex items-center space-x-3">
-                <button onclick="window.reopenBriefing()" class="bg-blue-700 hover:bg-blue-600 text-white rounded transition flex items-center gap-2 px-4 py-2" title="Ver Ordem de Operação">
+                <button onclick="window.reopenBriefing()" class="bg-blue-700 hover:bg-blue-600 text-white rounded transition flex items-center gap-2 px-4 py-2 shadow-lg" title="Ver Ordem de Operação">
                     <i class="fas fa-clipboard-list"></i> <span class="text-xs font-bold hidden md:block">Ordem de Op.</span>
                 </button>
-                <button onclick="window.exitToMenu()" class="bg-red-700 hover:bg-red-600 text-white rounded transition flex items-center gap-2 px-4 py-2" title="Sair/Encerrar Simulação">
+                <button onclick="window.exitToMenu()" class="bg-red-700 hover:bg-red-600 text-white rounded transition flex items-center gap-2 px-4 py-2 shadow-lg" title="Sair/Encerrar Simulação">
                     <i class="fas fa-sign-out-alt"></i> <span class="text-xs font-bold hidden md:block">Encerrar / Sair</span>
                 </button>
             </div>
@@ -281,7 +282,7 @@
             <div class="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-800">
                 <h2 class="text-2xl font-bold text-white"><i class="fa-solid fa-map-location-dot text-ics-blue mr-2"></i>Selecione ou Crie um Cenário</h2>
                 <div class="flex gap-2">
-                    <button onclick="window.startScenario('livre')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition border border-gray-500">Ir para Sandbox Livre</button>
+                    <button onclick="window.startScenario('livre')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm transition border border-gray-500 shadow-md">Ir para Sandbox Livre</button>
                 </div>
             </div>
             <div class="p-6 overflow-y-auto flex-1 bg-gray-900">
@@ -293,7 +294,7 @@
     <div id="saveCustomScenarioModal" class="hidden fixed inset-0 z-[7000] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-ics-panel rounded-xl max-w-md w-full border border-gray-600 shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-gray-800 p-5 border-b border-gray-700">
-                <h2 class="text-lg font-bold text-white tracking-wider"><i class="fa-solid fa-floppy-disk text-ics-blue mr-2"></i>Guardar Cenário Personalizado</h2>
+                <h2 class="text-lg font-bold text-white tracking-wider"><i class="fa-solid fa-floppy-disk text-ics-blue mr-2"></i>Salvar Cenário Personalizado</h2>
                 <p class="text-xs text-gray-400 mt-1">O estado atual do mapa (localização, ameaças e vento) será salvo localmente para uso futuro.</p>
             </div>
             <div class="p-6 bg-gray-900 flex flex-col gap-4">
@@ -307,7 +308,7 @@
                 </div>
                 <div class="flex gap-2 mt-2">
                     <button onclick="document.getElementById('saveCustomScenarioModal').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded transition-colors text-sm">Cancelar</button>
-                    <button onclick="window.saveCustomScenario()" class="flex-1 bg-ics-blue hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Guardar Cenário</button>
+                    <button onclick="window.saveCustomScenario()" class="flex-1 bg-ics-blue hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Salvar Cenário</button>
                 </div>
             </div>
         </div>
@@ -415,9 +416,12 @@
                 isCanvasEnv = true;
             }
 
-            // Saneamento do App ID para evitar paths de DB quebrados
-            if (currentAppId && currentAppId.includes('//')) {
-                currentAppId = currentAppId.replace(/[^a-zA-Z0-9-]/g, '_');
+            // Saneamento RIGOROSO do App ID para evitar paths de DB quebrados
+            if (currentAppId && typeof currentAppId === 'string') {
+                // Substitui tudo o que não for alfanumérico por underscore, garantindo que não há // ou caracteres ilegais
+                currentAppId = currentAppId.replace(/[^a-zA-Z0-9]/g, '_');
+            } else {
+                currentAppId = 'simulador-sci';
             }
 
             if (configToUse && Object.keys(configToUse).length > 0) {
@@ -442,9 +446,10 @@
                         }
                     } catch(e) { 
                         console.error("Falha ao iniciar autenticação Firebase:", e); 
-                        if (e.code === 'auth/configuration-not-found') {
+                        if (e.code === 'auth/configuration-not-found' || e.code === 'auth/operation-not-allowed') {
                             console.warn("Lembre-se de ativar o provedor 'Anônimo' no painel Authentication do seu Firebase Console.");
-                            document.getElementById('offlineWarning').classList.remove('hidden');
+                            const warnDiv = document.getElementById('offlineWarning');
+                            if (warnDiv) warnDiv.classList.remove('hidden');
                         }
                     }
                 };
@@ -458,9 +463,9 @@
 
         // Função de Sincronização Cloud/Local
         async function pushUpdateToDB(updateObj) {
-            const safeCode = window.currentRoomCode ? window.currentRoomCode.replace(/[^A-Z0-9]/g, '') : null;
+            const safeCode = window.currentRoomCode ? String(window.currentRoomCode).replace(/[^A-Z0-9]/ig, '') : null;
             
-            if(!isFirebaseActive || !currentUser || !safeCode) {
+            if(!isFirebaseActive || !currentUser || !safeCode || safeCode.length === 0) {
                 // Fallback Local
                 if(!window.currentDbState) window.currentDbState = {};
                 for(let key in updateObj) {
@@ -516,11 +521,12 @@
             'fire': { html: "<div class='sci-marker sci-resource'><i class='fa-solid fa-truck-fast'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Auto Bomba" },
             'foam': { html: "<div class='sci-marker sci-resource' style='background-color: #9333ea;'><i class='fa-solid fa-spray-can'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Carreta LGE" },
             'ship': { html: "<div class='sci-marker sci-water'><i class='fa-solid fa-ship'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Navio Bomba" },
-            'amb': { html: "<div class='sci-marker sci-resource' style='background-color: #16a34a;'><i class='fa-solid fa-truck-medical'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Ambulância" }
+            'amb': { html: "<div class='sci-marker sci-resource' style='background-color: #16a34a;'><i class='fa-solid fa-truck-medical'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Ambulância" },
+            'hazmat': { html: "<div class='sci-marker sci-resource' style='background-color: #f59e0b;'><i class='fa-solid fa-biohazard'></i></div>", size: [30, 30], anchor: [15, 15], popup: "Equipa Hazmat" }
         };
         const inventoryBase = {
             'pc': { label: 'Posto Comando', total: 1, used: 0 }, 'e': { label: 'Área Espera', total: 1, used: 0 }, 'h': { label: 'Heliponto', total: 1, used: 0 },
-            'fire': { label: 'Auto Bomba', total: 5, used: 0 }, 'foam': { label: 'Carreta LGE', total: 3, used: 0 }, 'ship': { label: 'Navio Bomba', total: 2, used: 0 }, 'amb': { label: 'Ambulância', total: 3, used: 0 }
+            'fire': { label: 'Auto Bomba', total: 5, used: 0 }, 'foam': { label: 'Carreta LGE', total: 3, used: 0 }, 'ship': { label: 'Navio Bomba', total: 2, used: 0 }, 'amb': { label: 'Ambulância', total: 3, used: 0 }, 'hazmat': { label: 'Eq. Hazmat', total: 1, used: 0 }
         };
 
         const baseScenarios = [
@@ -529,7 +535,7 @@
                 lat: -23.9248, lng: -46.3685, zoom: 16, windDeg: 180, windLabel: "Sul (S)",
                 description: 'Incêndio massivo em tanques de combustível. Risco crítico de propagação para setor de Amônia. Requer intervenção massiva.',
                 objectives: ['Estabelecer Posto de Comando Seguro', 'Resfriamento ininterrupto com Navios', 'Ataque com Espuma (LGE)'],
-                inventory: { pc: 1, e: 1, h: 1, fire: 8, foam: 6, ship: 3, amb: 3 },
+                inventory: { pc: 1, e: 1, h: 1, fire: 8, foam: 6, ship: 3, amb: 3, hazmat: 0 },
                 elements: [
                     {type: 'fire', latOffset: 0, lngOffset: 0, scale: 2.5}, {type: 'smoke', latOffset: 0, lngOffset: 0, scale: 3}, {type: 'building', latOffset: -0.0006, lngOffset: -0.0006, scale: 1.5}
                 ]
@@ -539,7 +545,7 @@
                 lat: -23.8778, lng: -46.4133, zoom: 17, windDeg: 90, windLabel: "Leste (E)",
                 description: 'Colisão rodoviária com camião-tanque contendo Produto Químico ONU 1005 (Amônia). Nuvem tóxica ativa no asfalto.',
                 objectives: ['Isolar rodovia rigorosamente a barlavento', 'Montar corredor de Descontaminação', 'Extração das vítimas presas'],
-                inventory: { pc: 1, e: 1, h: 1, fire: 4, foam: 1, ship: 0, amb: 5 },
+                inventory: { pc: 1, e: 1, h: 1, fire: 4, foam: 1, ship: 0, amb: 5, hazmat: 2 },
                 elements: [
                     {type: 'train', latOffset: 0, lngOffset: 0, scale: 1.5}, {type: 'car', latOffset: -0.0002, lngOffset: 0.0001, scale: 1}, {type: 'hazmat', latOffset: 0, lngOffset: 0, scale: 1.5, product: "ONU 1005"}, {type: 'smoke', latOffset: 0, lngOffset: 0, scale: 1.5}
                 ]
@@ -549,7 +555,7 @@
                 lat: -23.4322, lng: -46.4692, zoom: 16, windDeg: 270, windLabel: "Oeste (W)",
                 description: 'Aeronave comercial derrapou fora da pista. Fogo intenso na fuselagem. Múltiplas Vítimas (MCI) confirmadas no local.',
                 objectives: ['Supressão imediata com LGE', 'Estabelecer Triagem (Lonas)', 'Criar corredores de Ambulância'],
-                inventory: { pc: 1, e: 2, h: 2, fire: 8, foam: 5, ship: 0, amb: 10 },
+                inventory: { pc: 1, e: 2, h: 2, fire: 8, foam: 5, ship: 0, amb: 10, hazmat: 0 },
                 elements: [
                     {type: 'plane', latOffset: 0, lngOffset: 0, scale: 3.5}, {type: 'fire', latOffset: 0.0002, lngOffset: -0.0005, scale: 2}, {type: 'smoke', latOffset: 0.0002, lngOffset: -0.0005, scale: 3}
                 ]
@@ -634,7 +640,7 @@
             if(window.currentMode === 'instructor') updateInstructorInventoryDisplay();
             
             document.getElementById('connectionDot').classList.replace('bg-red-500', 'bg-green-500');
-            document.getElementById('connectionText').innerText = isFirebaseActive ? "Sincronizado Nuvem" : "Modo Local";
+            document.getElementById('connectionText').innerText = (isFirebaseActive && currentUser) ? "Sincronizado Nuvem" : "Modo Local";
         }
 
         function syncMarkersLocally(dbMap, localMap, layerGroup, isOwner) {
@@ -703,7 +709,7 @@
             const time = new Date().toLocaleTimeString('pt-BR', {hour12: false});
             pushUpdateToDB({ communications: arrayUnion({from, to, message, type, time}) });
             
-            if(!isFirebaseActive && window.currentDbState) {
+            if((!isFirebaseActive || !currentUser) && window.currentDbState) {
                if(!window.currentDbState.communications) window.currentDbState.communications = [];
                window.currentDbState.communications.push({from, to, message, type, time});
                applyRemoteState(window.currentDbState);
@@ -787,23 +793,20 @@
                 
                 if(isFirebaseActive) {
                     if(authReadyPromise) await authReadyPromise; 
-                    const safeCode = window.currentRoomCode.replace(/[^A-Z0-9]/g, '');
-                    await setDoc(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode), {
-                        createdAt: Date.now(), scenarioTitle: 'Modo Livre', windDeg: 0, windLabel: 'Norte (N)', windVisual: false,
-                        description: 'Operação de treinamento em Modo Livre.', objectives: ['Avaliar o perímetro'],
-                        mapCenter: {lat: -23.5505, lng: -46.6333, zoom: 15},
-                        zones: {hot:null, warm:null, cold:null}, elements: {}, resources: {}, communications: [], inventoryTotals: { pc: 1, e: 1, h: 1, fire: 5, foam: 3, ship: 2, amb: 3 }
-                    }, { merge: true });
-                    listenToRoom(window.currentRoomCode);
+                    const safeCode = window.currentRoomCode ? String(window.currentRoomCode).replace(/[^A-Z0-9]/ig, '') : null;
+                    if (safeCode && safeCode.length > 0) {
+                        await setDoc(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode), {
+                            createdAt: Date.now(), scenarioTitle: 'Modo Livre', windDeg: 0, windLabel: 'Norte (N)', windVisual: false,
+                            description: 'Operação de treinamento em Modo Livre.', objectives: ['Avaliar o perímetro'],
+                            mapCenter: {lat: -23.5505, lng: -46.6333, zoom: 15},
+                            zones: {hot:null, warm:null, cold:null}, elements: {}, resources: {}, communications: [], inventoryTotals: { pc: 1, e: 1, h: 1, fire: 5, foam: 3, ship: 2, amb: 3 }
+                        }, { merge: true });
+                        listenToRoom(window.currentRoomCode);
+                    } else {
+                        initLocalFallback();
+                    }
                 } else {
-                    window.currentDbState = {
-                        scenarioTitle: 'Modo Livre', windDeg: 0, windLabel: 'Norte (N)', windVisual: false,
-                        description: 'Operação de treinamento em Modo Livre.', objectives: ['Avaliar o perímetro'],
-                        mapCenter: {lat: -23.5505, lng: -46.6333, zoom: 15},
-                        zones: {hot:null, warm:null, cold:null}, elements: {}, resources: {}, communications: [], inventoryTotals: { pc: 1, e: 1, h: 1, fire: 5, foam: 3, ship: 2, amb: 3 }
-                    };
-                    applyRemoteState(window.currentDbState);
-                    window.showSimpleToast("Modo Offline Local Ativado.");
+                    initLocalFallback();
                 }
 
                 setupInstructorModeUI();
@@ -815,17 +818,26 @@
             }
         };
 
+        function initLocalFallback() {
+            window.currentDbState = {
+                scenarioTitle: 'Modo Local', windDeg: 0, windLabel: 'Norte (N)', windVisual: false,
+                description: 'Operação de treinamento em Modo Local.', objectives: ['Avaliar o perímetro'],
+                mapCenter: {lat: -23.5505, lng: -46.6333, zoom: 15},
+                zones: {hot:null, warm:null, cold:null}, elements: {}, resources: {}, communications: [], inventoryTotals: { pc: 1, e: 1, h: 1, fire: 5, foam: 3, ship: 2, amb: 3 }
+            };
+            applyRemoteState(window.currentDbState);
+            window.showSimpleToast("Modo Offline Local Ativado (Falha de conexão à Nuvem).");
+        }
+
         window.joinRoom = async function() {
             const rawCode = document.getElementById('roomCodeInput').value.trim().toUpperCase();
-            
-            // Impede strings quebras, paths longos ou URLS da Vercel para impedir erros de firebase
             const code = rawCode.replace(/[^A-Z0-9]/g, '');
             
             if (code.length < 4 || rawCode.includes('HTTP') || rawCode.includes('/')) {
                 const input = document.getElementById('roomCodeInput'); 
                 input.classList.add('border-red-500'); 
                 setTimeout(() => input.classList.remove('border-red-500'), 1000); 
-                window.showSimpleToast("Código inválido! Digite apenas a senha alfanumérica da sala.");
+                window.showSimpleToast("Código inválido! Digite apenas o código da sala.");
                 return;
             }
             
@@ -836,22 +848,21 @@
             if(isFirebaseActive) {
                 if(authReadyPromise) await authReadyPromise; 
                 const safeCode = code;
-                const snap = await getDoc(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode));
-                if(!snap.exists()) { 
-                    window.showSimpleToast("Código de Sala Inválido ou Expirado."); 
-                    window.exitToMenu();
-                    return; 
+                if (!safeCode) return;
+                try {
+                    const snap = await getDoc(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode));
+                    if(!snap.exists()) { 
+                        window.showSimpleToast("Código de Sala Inválido ou Expirado."); 
+                        window.exitToMenu();
+                        return; 
+                    }
+                    listenToRoom(window.currentRoomCode);
+                } catch(e) {
+                    console.error("Erro a entrar na sala na Nuvem. Fallback para Local.", e);
+                    initLocalFallback();
                 }
-                listenToRoom(window.currentRoomCode);
             } else {
-                if(!window.currentDbState) {
-                    window.currentDbState = {
-                        scenarioTitle: 'Modo Local', windDeg: 0, windLabel: 'Norte (N)', mapCenter: {lat: -23.5505, lng: -46.6333, zoom: 15},
-                        description: 'Operação de treinamento em Modo Local.', objectives: ['Avaliar o perímetro'],
-                        zones: {}, elements: {}, resources: {}, communications: [], inventoryTotals: { pc: 1, e: 1, h: 1, fire: 5, foam: 3, ship: 2, amb: 3 }
-                    };
-                }
-                applyRemoteState(window.currentDbState);
+                initLocalFallback();
             }
             
             setTimeout(() => {
@@ -861,13 +872,13 @@
         };
 
         function listenToRoom(code) {
-            if(!isFirebaseActive) return;
+            if(!isFirebaseActive || !currentUser) return;
             if(roomUnsubscribe) { roomUnsubscribe(); roomUnsubscribe = null; }
             document.getElementById('connectionDot').classList.replace('bg-green-500', 'bg-red-500');
             document.getElementById('connectionText').innerText = "Sincronizando...";
             
-            const safeCode = code.replace(/[^A-Z0-9]/g, '');
-            if(!safeCode) return;
+            const safeCode = code ? String(code).replace(/[^A-Z0-9]/ig, '') : null;
+            if(!safeCode || safeCode.length === 0) return;
             
             roomUnsubscribe = onSnapshot(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode), (snap) => {
                 if(snap.exists()) applyRemoteState(snap.data());
