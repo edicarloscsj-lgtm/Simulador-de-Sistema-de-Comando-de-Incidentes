@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -70,10 +70,10 @@
 </head>
 <body class="h-screen overflow-hidden font-sans flex flex-col relative">
 
-    <!-- Tela de Login/Seleção de Modo -->
+    <!-- Ecrã de Início de Sessão / Seleção de Modo -->
     <div id="loginScreen" class="fixed inset-0 z-[5000] flex items-center justify-center bg-ics-dark overflow-y-auto py-10">
         
-        <!-- Botão de Configuração de Servidor Firebase (Para Google Sites/Vercel) -->
+        <!-- Botão de Configuração de Servidor Firebase -->
         <button onclick="window.openFirebaseSettings()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700 text-xs flex items-center gap-2 shadow-lg">
             <i class="fa-solid fa-server"></i> Configurar Servidor
         </button>
@@ -90,8 +90,8 @@
 
             <!-- Aviso se Firebase não estiver ativo -->
             <div id="offlineWarning" class="hidden bg-red-900 border border-red-500 text-white p-3 rounded-lg text-sm text-center mb-6 w-full max-w-2xl shadow-lg">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Aviso de Conexão:</b> Operando em modo de rede de contingência (Local/Offline). 
-                <br><span class="text-xs text-red-200">Se a sincronização falhar, certifique-se de que o "Login Anónimo" está ativado no Firebase Console e que o domínio da Vercel foi autorizado na seção Authentication.</span>
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Aviso de Ligação:</b> A operar em modo de rede de contingência (Local/Offline). 
+                <br><span class="text-xs text-red-200">Se a sincronização falhar, certifique-se de que o "Início de Sessão Anónimo" está ativado na consola Firebase e que o domínio está autorizado.</span>
             </div>
 
             <!-- Botões Principais -->
@@ -130,13 +130,13 @@
                         </div>
                         <div class="flex gap-2">
                             <button onclick="window.cancelJoin()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded transition-colors text-sm">Voltar</button>
-                            <button id="btnJoinRoom" onclick="window.joinRoom()" class="flex-1 bg-ics-amber hover:bg-amber-600 text-black font-bold py-3 rounded transition-colors text-sm">Conectar</button>
+                            <button id="btnJoinRoom" onclick="window.joinRoom()" class="flex-1 bg-ics-amber hover:bg-amber-600 text-black font-bold py-3 rounded transition-colors text-sm">Ligar</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Bloco de Informação: Como Funciona -->
+            <!-- Bloco de Informação -->
             <div class="bg-gray-800/80 p-6 rounded-xl border border-gray-700 text-left w-full text-sm text-gray-300 shadow-lg">
                  <h3 class="text-lg font-bold text-white mb-3 flex items-center"><i class="fa-solid fa-circle-info text-ics-blue mr-2 text-xl"></i>Como Usar o Sistema</h3>
                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -146,7 +146,7 @@
                      </div>
                      <div class="bg-gray-900 p-4 rounded border border-gray-700">
                          <h4 class="text-ics-blue font-bold mb-2 text-lg"><i class="fa-solid fa-map-location-dot mr-2"></i>A Equipa (Alunos)</h4>
-                         <p class="text-sm text-gray-400 leading-relaxed">Entram com o código gerado pelo instrutor. Leem a Ordem de Operação (Briefing), ativam a Grade Cartográfica para comunicação tática, desenham as zonas de perigo e distribuem as viaturas no mapa.</p>
+                         <p class="text-sm text-gray-400 leading-relaxed">Entram com o código gerado pelo instrutor. Lêm a Ordem de Operação (Briefing), ativam a Grade Cartográfica para comunicação tática, desenham as zonas de perigo e distribuem as viaturas no mapa.</p>
                      </div>
                  </div>
                  
@@ -179,7 +179,7 @@
                 <div class="h-6 w-px bg-gray-600 hidden md:block"></div>
                 <div id="scenarioInfo" class="text-sm">
                     <span class="text-gray-400">Cenário:</span>
-                    <span id="currentScenarioName" class="text-white font-semibold ml-1">Carregando...</span>
+                    <span id="currentScenarioName" class="text-white font-semibold ml-1">Aguardando Sincronização...</span>
                 </div>
             </div>
 
@@ -187,9 +187,6 @@
                 <div class="text-center">
                     <div class="text-xs text-gray-500 uppercase tracking-wider">Tempo Simulado</div>
                     <div id="simTime" class="font-mono text-xl text-ics-amber">00:00:00</div>
-                </div>
-                <div id="stressIndicator" class="hidden px-3 py-1 bg-ics-red rounded text-xs font-bold animate-pulse">
-                    CRISE CRÍTICA
                 </div>
             </div>
 
@@ -215,15 +212,15 @@
                 </div>
 
                 <div class="p-4 flex-1 overflow-y-auto no-scrollbar">
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Inventário em Campo</h3>
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Inventário no Terreno</h3>
                     <div id="resourcePanel" class="space-y-2"></div>
                 </div>
 
                 <div class="p-4 border-t border-gray-700">
-                    <div class="text-xs text-gray-500 mb-1">Status de Conexão</div>
+                    <div class="text-xs text-gray-500 mb-1">Status de Ligação</div>
                     <div class="flex items-center space-x-2">
                         <div id="connectionDot" class="w-2 h-2 bg-red-500 rounded-full status-dot animate-pulse"></div>
-                        <span id="connectionText" class="text-sm text-gray-400">Aguardando...</span>
+                        <span id="connectionText" class="text-sm text-gray-400">A aguardar...</span>
                     </div>
                 </div>
             </aside>
@@ -260,7 +257,8 @@
                     <div class="p-3 border-t border-gray-700 bg-gray-800 shrink-0">
                         <div class="flex space-x-2">
                             <select id="messageTarget" class="bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm text-white">
-                                <option value="all">Rede Geral</option><option value="command">Comando</option>
+                                <option value="all">Rede Geral</option>
+                                <option value="command">Comando</option>
                             </select>
                             <input type="text" id="messageInput" placeholder="Mensagem de rádio..." class="flex-1 bg-gray-900 border border-gray-600 rounded px-3 py-1.5 text-sm text-white placeholder-gray-500" onkeypress="if(event.key==='Enter') window.sendMessage()">
                             <button onclick="window.sendMessage()" class="px-4 py-1.5 bg-ics-blue hover:bg-blue-600 rounded text-white text-sm transition font-bold">TX <i class="fas fa-broadcast-tower ml-1"></i></button>
@@ -277,6 +275,24 @@
     </div>
 
     <!-- Modais de Interface -->
+    
+    <!-- Modal Configuração Firebase -->
+    <div id="firebaseSettingsModal" class="hidden fixed inset-0 z-[8000] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-ics-panel rounded-xl max-w-lg w-full border border-gray-600 shadow-2xl p-6">
+            <h2 class="text-xl font-bold text-white mb-2"><i class="fa-solid fa-server text-ics-blue mr-2"></i>Configurar Servidor Firebase</h2>
+            <p class="text-xs text-gray-400 mb-4 leading-relaxed">Para usar o modo Multiplayer com alojamento externo (Vercel, Google Sites), cole aqui o JSON de configuração do seu projeto Firebase.</p>
+            <textarea id="firebaseConfigInput" rows="6" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-xs text-white font-mono mb-4" placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "...", "storageBucket": "...", "messagingSenderId": "...", "appId": "..." }'></textarea>
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('firebaseSettingsModal').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded transition-colors text-sm">Cancelar</button>
+                <button onclick="window.saveFirebaseConfig()" class="flex-1 bg-ics-blue hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Guardar e Ligar</button>
+            </div>
+            <div class="mt-4 pt-3 border-t border-gray-700 text-center">
+                <button onclick="window.clearFirebaseConfig()" class="text-xs text-red-400 hover:text-red-300">Remover Configurações (Usar Predefinição)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Seleção Cenário -->
     <div id="scenarioModal" class="hidden fixed inset-0 z-[6000] bg-black/80 flex items-center justify-center p-4">
         <div class="bg-ics-panel rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col border border-gray-600">
             <div class="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-800">
@@ -291,11 +307,12 @@
         </div>
     </div>
 
+    <!-- Modal Guardar Cenário Personalizado -->
     <div id="saveCustomScenarioModal" class="hidden fixed inset-0 z-[7000] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-ics-panel rounded-xl max-w-md w-full border border-gray-600 shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-gray-800 p-5 border-b border-gray-700">
-                <h2 class="text-lg font-bold text-white tracking-wider"><i class="fa-solid fa-floppy-disk text-ics-blue mr-2"></i>Salvar Cenário Personalizado</h2>
-                <p class="text-xs text-gray-400 mt-1">O estado atual do mapa (localização, ameaças e vento) será salvo localmente para uso futuro.</p>
+                <h2 class="text-lg font-bold text-white tracking-wider"><i class="fa-solid fa-floppy-disk text-ics-blue mr-2"></i>Guardar Cenário Personalizado</h2>
+                <p class="text-xs text-gray-400 mt-1">O estado atual do mapa será salvo localmente para uso futuro.</p>
             </div>
             <div class="p-6 bg-gray-900 flex flex-col gap-4">
                 <div>
@@ -308,12 +325,13 @@
                 </div>
                 <div class="flex gap-2 mt-2">
                     <button onclick="document.getElementById('saveCustomScenarioModal').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded transition-colors text-sm">Cancelar</button>
-                    <button onclick="window.saveCustomScenario()" class="flex-1 bg-ics-blue hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Salvar Cenário</button>
+                    <button onclick="window.saveCustomScenario()" class="flex-1 bg-ics-blue hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Guardar Cenário</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal Ordem de Operação (Briefing) -->
     <div id="briefingModal" class="hidden fixed inset-0 z-[7000] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-ics-panel rounded-xl max-w-2xl w-full border-l-4 border-ics-amber shadow-2xl flex flex-col overflow-hidden">
             <div class="bg-gray-800 p-5 border-b border-gray-700 flex items-center gap-3">
@@ -332,23 +350,7 @@
 
     <div id="simple-toast" class="absolute top-20 left-1/2 transform -translate-x-1/2 z-[9000] bg-gray-800 border border-gray-600 text-white px-4 py-2 rounded shadow-lg text-sm transition-opacity duration-300 opacity-0 pointer-events-none text-center"></div>
 
-    <!-- Modal Configuração Firebase (Para Hospedagem Externa) -->
-    <div id="firebaseSettingsModal" class="hidden fixed inset-0 z-[8000] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-ics-panel rounded-xl max-w-lg w-full border border-gray-600 shadow-2xl p-6">
-            <h2 class="text-xl font-bold text-white mb-2"><i class="fa-solid fa-server text-ics-blue mr-2"></i>Configurar Servidor Firebase</h2>
-            <p class="text-xs text-gray-400 mb-4 leading-relaxed">Cole aqui o JSON de configuração do seu projeto Firebase para garantir que as operações em tempo real funcionam em ambientes externos como a Vercel.</p>
-            <textarea id="firebaseConfigInput" rows="6" class="w-full bg-gray-900 border border-gray-600 rounded p-2 text-xs text-white font-mono mb-4" placeholder='{ "apiKey": "...", "authDomain": "...", "projectId": "...", "storageBucket": "...", "messagingSenderId": "...", "appId": "..." }'></textarea>
-            <div class="flex gap-2">
-                <button onclick="document.getElementById('firebaseSettingsModal').classList.add('hidden')" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded transition-colors text-sm">Cancelar</button>
-                <button onclick="window.saveFirebaseConfig()" class="flex-1 bg-ics-blue hover:bg-blue-600 text-white font-bold py-2 rounded transition-colors text-sm">Salvar e Aplicar</button>
-            </div>
-            <div class="mt-4 pt-3 border-t border-gray-700 text-center">
-                <button onclick="window.clearFirebaseConfig()" class="text-xs text-red-400 hover:text-red-300">Limpar Configuração</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts Leaflet e Firebase (ES Modules) -->
+    <!-- Scripts Leaflet e Firebase -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <script type="module">
@@ -370,7 +372,7 @@
                     JSON.parse(val); 
                     localStorage.setItem('customFirebaseConfig', val);
                     document.getElementById('firebaseSettingsModal').classList.add('hidden');
-                    window.showSimpleToast("Configuração salva! Recarregando...");
+                    window.showSimpleToast("Configuração guardada! A recarregar...");
                     setTimeout(() => { window.location.reload(); }, 1500);
                 } catch(e) { window.showSimpleToast("JSON Inválido! Copie exatamente do Firebase."); }
             }
@@ -379,7 +381,7 @@
         window.clearFirebaseConfig = function() {
             localStorage.removeItem('customFirebaseConfig');
             document.getElementById('firebaseSettingsModal').classList.add('hidden');
-            window.showSimpleToast("Configurações limpas. Recarregando...");
+            window.showSimpleToast("Configurações limpas. A recarregar...");
             setTimeout(() => { window.location.reload(); }, 1500);
         };
 
@@ -405,7 +407,6 @@
         let configToUse = defaultFirebaseConfig;
 
         try {
-            // Tenta obter configurações personalizadas ou do Canvas
             const customConfigRaw = localStorage.getItem('customFirebaseConfig');
             if (customConfigRaw && customConfigRaw.trim() !== '') {
                 configToUse = JSON.parse(customConfigRaw);
@@ -418,7 +419,6 @@
 
             // Saneamento RIGOROSO do App ID para evitar paths de DB quebrados
             if (currentAppId && typeof currentAppId === 'string') {
-                // Substitui tudo o que não for alfanumérico por underscore, garantindo que não há // ou caracteres ilegais
                 currentAppId = currentAppId.replace(/[^a-zA-Z0-9]/g, '_');
             } else {
                 currentAppId = 'simulador-sci';
@@ -447,7 +447,7 @@
                     } catch(e) { 
                         console.error("Falha ao iniciar autenticação Firebase:", e); 
                         if (e.code === 'auth/configuration-not-found' || e.code === 'auth/operation-not-allowed') {
-                            console.warn("Lembre-se de ativar o provedor 'Anônimo' no painel Authentication do seu Firebase Console.");
+                            console.warn("Lembre-se de ativar o provedor 'Anónimo' no painel Authentication da sua consola Firebase.");
                             const warnDiv = document.getElementById('offlineWarning');
                             if (warnDiv) warnDiv.classList.remove('hidden');
                         }
@@ -533,8 +533,8 @@
             {
                 id: 'ultracargo', title: 'Incêndio em Terminal de Líquidos',
                 lat: -23.9248, lng: -46.3685, zoom: 16, windDeg: 180, windLabel: "Sul (S)",
-                description: 'Incêndio massivo em tanques de combustível. Risco crítico de propagação para setor de Amônia. Requer intervenção massiva.',
-                objectives: ['Estabelecer Posto de Comando Seguro', 'Resfriamento ininterrupto com Navios', 'Ataque com Espuma (LGE)'],
+                description: 'Incêndio massivo em tanques de combustível. Risco crítico de propagação para o setor de Amónia. Requer intervenção massiva.',
+                objectives: ['Estabelecer Posto de Comando Seguro', 'Arrefecimento ininterrupto com Navios', 'Ataque com Espuma (LGE)'],
                 inventory: { pc: 1, e: 1, h: 1, fire: 8, foam: 6, ship: 3, amb: 3, hazmat: 0 },
                 elements: [
                     {type: 'fire', latOffset: 0, lngOffset: 0, scale: 2.5}, {type: 'smoke', latOffset: 0, lngOffset: 0, scale: 3}, {type: 'building', latOffset: -0.0006, lngOffset: -0.0006, scale: 1.5}
@@ -542,8 +542,8 @@
             },
             {
                 id: 'rodovia_hazmat', title: 'Acidente Rodoviário (Hazmat)',
-                lat: -23.8778, lng: -46.4133, zoom: 17, windDeg: 90, windLabel: "Leste (E)",
-                description: 'Colisão rodoviária com camião-tanque contendo Produto Químico ONU 1005 (Amônia). Nuvem tóxica ativa no asfalto.',
+                lat: -23.8778, lng: -46.4133, zoom: 17, windDeg: 90, windLabel: "Este (E)",
+                description: 'Colisão rodoviária com camião-cisterna contendo Produto Químico ONU 1005 (Amónia). Nuvem tóxica ativa no asfalto.',
                 objectives: ['Isolar rodovia rigorosamente a barlavento', 'Montar corredor de Descontaminação', 'Extração das vítimas presas'],
                 inventory: { pc: 1, e: 1, h: 1, fire: 4, foam: 1, ship: 0, amb: 5, hazmat: 2 },
                 elements: [
@@ -564,7 +564,7 @@
 
         const eventDatabase = {
             fire_spread: { title: 'Propagação Rápida', description: 'Ventos espalham o incêndio para mais perto das áreas limpas!', urgency: 'high' },
-            toxic_cloud: { title: 'Nuvem Tóxica Movendo-se', description: 'Pluma atinge Zona Morna. Recuar todas as unidades!', urgency: 'high' },
+            toxic_cloud: { title: 'Nuvem Tóxica Movendo-se', description: 'Pluma atinge a Zona Morna. Recuar todas as unidades!', urgency: 'high' },
             wind_change: { title: 'Mudança de Vento', description: 'Vento virou de forma brusca, preste atenção à pluma.', urgency: 'medium' },
             riot: { title: 'Tumulto Civil', description: 'Populares em pânico invadiram o perímetro seguro da operação.', urgency: 'high' }
         };
@@ -591,7 +591,7 @@
                 else document.getElementById('wind-visual-layer').classList.remove('wind-active');
             }
 
-            // Exibir Briefing para o Aluno (Uma única vez ao receber a base de dados)
+            // Exibir Briefing para o Aluno
             if (window.currentMode === 'student' && !window.studentHasSeenBriefing && data.scenarioTitle && data.scenarioTitle !== 'Modo Livre') {
                 window.showBriefing(
                     data.scenarioTitle,
@@ -706,7 +706,7 @@
         }
 
         function addLocalComm(from, to, message, type = 'normal') {
-            const time = new Date().toLocaleTimeString('pt-BR', {hour12: false});
+            const time = new Date().toLocaleTimeString('pt-PT', {hour12: false});
             pushUpdateToDB({ communications: arrayUnion({from, to, message, type, time}) });
             
             if((!isFirebaseActive || !currentUser) && window.currentDbState) {
@@ -728,7 +728,6 @@
             }
         };
 
-
         // --- INICIALIZAÇÃO DA INTERFACE ---
         window.enterMode = async function(mode) {
             if (mode === 'student_prompt') {
@@ -739,7 +738,7 @@
             }
 
             window.currentMode = mode;
-            window.studentHasSeenBriefing = false; // Reseta flag do aluno
+            window.studentHasSeenBriefing = false; 
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainInterface').classList.remove('hidden');
             
@@ -797,7 +796,7 @@
                     if (safeCode && safeCode.length > 0) {
                         await setDoc(doc(db, 'artifacts', currentAppId, 'public', 'data', 'rooms', safeCode), {
                             createdAt: Date.now(), scenarioTitle: 'Modo Livre', windDeg: 0, windLabel: 'Norte (N)', windVisual: false,
-                            description: 'Operação de treinamento em Modo Livre.', objectives: ['Avaliar o perímetro'],
+                            description: 'Operação de treino em Modo Livre.', objectives: ['Avaliar o perímetro'],
                             mapCenter: {lat: -23.5505, lng: -46.6333, zoom: 15},
                             zones: {hot:null, warm:null, cold:null}, elements: {}, resources: {}, communications: [], inventoryTotals: { pc: 1, e: 1, h: 1, fire: 5, foam: 3, ship: 2, amb: 3 }
                         }, { merge: true });
@@ -821,12 +820,12 @@
         function initLocalFallback() {
             window.currentDbState = {
                 scenarioTitle: 'Modo Local', windDeg: 0, windLabel: 'Norte (N)', windVisual: false,
-                description: 'Operação de treinamento em Modo Local.', objectives: ['Avaliar o perímetro'],
+                description: 'Operação de treino em Modo Local.', objectives: ['Avaliar o perímetro'],
                 mapCenter: {lat: -23.5505, lng: -46.6333, zoom: 15},
                 zones: {hot:null, warm:null, cold:null}, elements: {}, resources: {}, communications: [], inventoryTotals: { pc: 1, e: 1, h: 1, fire: 5, foam: 3, ship: 2, amb: 3 }
             };
             applyRemoteState(window.currentDbState);
-            window.showSimpleToast("Modo Offline Local Ativado (Falha de conexão à Nuvem).");
+            window.showSimpleToast("Modo Offline Local Ativado (Falha de ligação à Nuvem).");
         }
 
         window.joinRoom = async function() {
@@ -867,7 +866,7 @@
             
             setTimeout(() => {
                 addLocalComm('SISTEMA', 'REDE GERAL', `Terminal ligado à sala [${window.currentRoomCode}].`, 'system');
-                window.showSimpleToast(`Conectado à sala ${window.currentRoomCode}`);
+                window.showSimpleToast(`Ligado à sala ${window.currentRoomCode}`);
             }, 1000);
         };
 
@@ -875,7 +874,7 @@
             if(!isFirebaseActive || !currentUser) return;
             if(roomUnsubscribe) { roomUnsubscribe(); roomUnsubscribe = null; }
             document.getElementById('connectionDot').classList.replace('bg-green-500', 'bg-red-500');
-            document.getElementById('connectionText').innerText = "Sincronizando...";
+            document.getElementById('connectionText').innerText = "A sincronizar...";
             
             const safeCode = code ? String(code).replace(/[^A-Z0-9]/ig, '') : null;
             if(!safeCode || safeCode.length === 0) return;
@@ -891,7 +890,6 @@
             document.getElementById('roomCodeInput').value = '';
         };
 
-        // --- BOTÃO DE SAIR E ENCERRAR SEM ALERTS/CONFIRMS EXTERNOS ---
         window.exitToMenu = function() {
             // Esconder Interface / Mostrar Login
             document.getElementById('mainInterface').classList.add('hidden');
@@ -909,7 +907,7 @@
             window.currentDbState = null;
             window.studentHasSeenBriefing = false;
             
-            // Limpar Mapa (Para não deixar lixo visual)
+            // Limpar Mapa
             if(window.map) {
                 if(instructorLayer) instructorLayer.clearLayers();
                 if(studentLayer) studentLayer.clearLayers();
@@ -940,8 +938,8 @@
                 <div class="p-3 space-y-3">
                     
                     <div class="bg-gray-800 rounded p-2 border border-gray-700">
-                        <h4 class="text-[10px] font-bold text-gray-400 mb-1 uppercase">Salvar Operação</h4>
-                        <button onclick="window.openSaveScenarioModal()" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-xs font-bold shadow-md"><i class="fas fa-save mr-1"></i>Salvar como Novo Cenário</button>
+                        <h4 class="text-[10px] font-bold text-gray-400 mb-1 uppercase">Guardar Operação</h4>
+                        <button onclick="window.openSaveScenarioModal()" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-xs font-bold shadow-md"><i class="fas fa-save mr-1"></i>Guardar como Novo Cenário</button>
                     </div>
 
                     <div class="bg-gray-800 rounded p-2 border border-gray-700">
@@ -999,7 +997,7 @@
                             ${Object.entries(eventDatabase).map(([key, evt]) => `<option value="${key}">${evt.title}</option>`).join('')}
                         </select>
                         <button onclick="window.injectEvent()" class="w-full py-1 mb-2 bg-ics-orange hover:bg-orange-600 rounded text-white text-xs font-bold shadow-md"><i class="fas fa-bolt mr-1"></i>Disparar</button>
-                        <input type="text" id="instructorMsg" class="w-full bg-gray-900 border border-gray-600 rounded p-1 text-xs text-white mb-1" placeholder="Alerta Customizado...">
+                        <input type="text" id="instructorMsg" class="w-full bg-gray-900 border border-gray-600 rounded p-1 text-xs text-white mb-1" placeholder="Alerta Personalizado...">
                         <button onclick="window.sendInstructorMessage()" class="w-full py-1 bg-ics-red hover:bg-red-600 rounded text-white text-xs font-bold shadow-md"><i class="fas fa-bullhorn mr-1"></i>Alerta da Base</button>
                     </div>
                 </div>
@@ -1164,7 +1162,7 @@
         // --- ACÇÕES CLOUD ---
         window.startScenario = async function(id) {
             document.getElementById('scenarioModal').classList.add('hidden');
-            if(id === 'livre') { pushUpdateToDB({ scenarioTitle: 'Modo Livre', description: 'Operação de treinamento em Modo Livre.', objectives: ['Avaliar o perímetro e os recursos.'] }); return; }
+            if(id === 'livre') { pushUpdateToDB({ scenarioTitle: 'Modo Livre', description: 'Operação de treino em Modo Livre.', objectives: ['Avaliar o perímetro e os recursos.'] }); return; }
             
             let customScenarios = JSON.parse(localStorage.getItem('icsCustomScenarios') || '[]');
             let allScenarios = baseScenarios.concat(customScenarios);
