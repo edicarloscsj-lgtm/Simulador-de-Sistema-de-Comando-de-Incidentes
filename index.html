@@ -385,6 +385,8 @@
         };
 
         // --- CONFIGURAÇÃO FIREBASE EMBUTIDA ---
+        // IMPORTANTE: Para distribuição, use as suas próprias chaves do Firebase aqui.
+        // Garanta que o "Início de Sessão Anónimo" (Anonymous Auth) está ATIVO na sua consola Firebase -> Authentication
         const defaultFirebaseConfig = {
             apiKey: "AIzaSyAyfIv417O-Ceg1aiRdubBGxxTSRLar_nI",
             authDomain: "simulador-sci.firebaseapp.com",
@@ -404,7 +406,6 @@
 
         let configToUse = defaultFirebaseConfig;
         
-        // Obtém o AppId em bruto (Pode vir sujo ou como URL na Vercel)
         let rawAppId = typeof __app_id !== 'undefined' ? String(__app_id) : 'simulador-sci';
 
         try {
@@ -428,7 +429,6 @@
             document.getElementById('offlineWarning').classList.remove('hidden');
         }
         
-        // SANEAMENTO ESTRITO DO APP_ID: O Firebase não aceita '//', URLs ou caracteres especiais nos caminhos (paths)
         const appId = rawAppId.replace(/[^a-zA-Z0-9-]/g, '_');
 
         if (isFirebaseActive) {
@@ -457,12 +457,10 @@
             });
         }
 
-        // Função de Sincronização Cloud/Local
         async function pushUpdateToDB(updateObj) {
             const safeCode = window.currentRoomCode ? String(window.currentRoomCode).replace(/[^A-Z0-9]/ig, '') : 'default_room';
             
             if(!isFirebaseActive || !currentUser || safeCode === 'default_room') {
-                // Fallback Local
                 if(!window.currentDbState) window.currentDbState = {};
                 for(let key in updateObj) {
                     const keys = key.split('.');
@@ -480,7 +478,6 @@
                 return;
             }
             try {
-                // A referência ao documento agora usa variáveis 100% limpas de URLs ou barras
                 const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', safeCode);
                 await setDoc(roomRef, updateObj, { merge: true });
             } catch(e) { console.error("Falha a sincronizar:", e); }
@@ -495,7 +492,11 @@
         window.map = null;
         window.gridLayer = null;
         window.currentDbState = null; 
-        window.studentHasSeenBriefing = false; 
+        window.studentHasSeenBriefing = false;
+        
+        // VARIÁVEIS NOVAS PARA RESOLVER O PROBLEMA DO MAPA
+        window.hasSyncedMapInitially = false; 
+        window.lastMapSyncTrigger = null;
         
         let simTimer = null;
         let simSeconds = 0;
@@ -572,10 +573,19 @@
             
             document.getElementById('currentScenarioName').innerText = data.scenarioTitle || 'Simulação Livre';
             
-            if(data.mapCenter && typeof data.mapCenter.lat === 'number' && typeof data.mapCenter.lng === 'number' && !isNaN(data.mapCenter.lat) && !isNaN(data.mapCenter.lng) && window.map) {
-                const curCenter = window.map.getCenter();
-                if(Math.abs(curCenter.lat - data.mapCenter.lat) > 0.01) {
-                    window.map.setView([data.mapCenter.lat, data.mapCenter.lng], data.mapCenter.zoom || 16);
+            // LÓGICA DE MAPA CORRIGIDA AQUI
+            if(data.mapCenter && typeof data.mapCenter.lat === 'number' && typeof data.mapCenter.lng === 'number' && window.map) {
+                
+                // Se for a primeira vez que o aluno sincroniza a sala, OU se o instrutor tiver clicado no novo botão de forçar visão
+                if (!window.hasSyncedMapInitially || data.mapSyncTrigger !== window.lastMapSyncTrigger) {
+                    // flyTo faz uma animação fluida direta para o local exato
+                    window.map.flyTo([data.mapCenter.lat, data.mapCenter.lng], data.mapCenter.zoom || 16, {
+                        animate: true,
+                        duration: 1.5
+                    });
+                    
+                    window.hasSyncedMapInitially = true;
+                    if (data.mapSyncTrigger) window.lastMapSyncTrigger = data.mapSyncTrigger;
                 }
             }
 
@@ -588,7 +598,6 @@
                 else document.getElementById('wind-visual-layer').classList.remove('wind-active');
             }
 
-            // Exibir Briefing para o Aluno
             if (window.currentMode === 'student' && !window.studentHasSeenBriefing && data.scenarioTitle && data.scenarioTitle !== 'Modo Livre') {
                 window.showBriefing(
                     data.scenarioTitle,
@@ -598,7 +607,6 @@
                 window.studentHasSeenBriefing = true;
             }
 
-            // Sync Zonas
             const dbZones = data.zones || {};
             ['hot', 'warm', 'cold'].forEach(t => {
                 const zData = dbZones[t];
@@ -908,6 +916,10 @@
             window.currentDbState = null;
             window.studentHasSeenBriefing = false;
             
+            // RESET DA VARIÁVEL DO MAPA AQUI TAMBÉM
+            window.hasSyncedMapInitially = false;
+            window.lastMapSyncTrigger = null;
+            
             // Limpar Mapa
             if(window.map) {
                 if(instructorLayer) instructorLayer.clearLayers();
@@ -943,8 +955,12 @@
                         <button onclick="window.openSaveScenarioModal()" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded text-white text-xs font-bold shadow-md"><i class="fas fa-save mr-1"></i>Salvar como Novo Cenário</button>
                     </div>
 
+                    <!-- BOTÃO 'FORÇAR VISÃO' ADICIONADO AQUI -->
                     <div class="bg-gray-800 rounded p-2 border border-gray-700">
-                        <h4 class="text-[10px] font-bold text-gray-400 mb-1 uppercase">Configurar Mapa</h4>
+                        <h4 class="text-[10px] font-bold text-gray-400 mb-1 uppercase flex justify-between items-center">
+                            Configurar Mapa
+                            <button onclick="window.forceMapSync()" class="text-ics-blue hover:text-blue-400 transition-colors" title="Forçar o mapa de todos os alunos a olhar para a zona atual"><i class="fa-solid fa-crosshairs"></i> Puxar Visão</button>
+                        </h4>
                         <div class="flex gap-2 mb-2">
                             <input type="text" id="location-search" placeholder="Ex: Aeroporto..." class="w-full bg-gray-900 border border-gray-600 rounded px-2 py-1 text-xs text-white">
                             <button onclick="window.searchLocation()" class="bg-ics-blue text-white px-3 py-1 rounded text-xs font-bold">Ir</button>
@@ -1004,6 +1020,17 @@
                 </div>
             `;
         }
+
+        // FUNÇÃO NOVA DO INSTRUTOR
+        window.forceMapSync = function() {
+            if(!window.map) return;
+            const center = window.map.getCenter();
+            pushUpdateToDB({ 
+                mapCenter: { lat: center.lat, lng: center.lng, zoom: window.map.getZoom() },
+                mapSyncTrigger: Date.now() // Força um ID único para que os clientes saibam que foi pedido agora
+            });
+            window.showSimpleToast("A focar todos os utilizadores na sua vista atual...");
+        };
 
         window.updateInstructorInventoryDisplay = function() {
             const cPanel = document.getElementById('instructor-inventory-list');
@@ -1170,8 +1197,10 @@
             const s = allScenarios.find(x => x.id === id);
             if(!s) return;
 
+            // QUANDO O INSTRUTOR ESCOLHE UM CENÁRIO, TAMBÉM DISPARA O TRIGGER DO MAPA
             await pushUpdateToDB({
                 scenarioTitle: s.title, mapCenter: {lat: s.lat, lng: s.lng, zoom: s.zoom || 16},
+                mapSyncTrigger: Date.now(),
                 description: s.description || 'Operação tática iniciada.', objectives: s.objectives || [],
                 windDeg: s.windDeg, windLabel: s.windLabel, windVisual: true,
                 zones: {hot:null, warm:null, cold:null}, elements: {}, resources: {}, communications: [], inventoryTotals: s.inventory
