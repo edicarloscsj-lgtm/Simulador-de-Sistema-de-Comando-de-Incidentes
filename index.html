@@ -315,10 +315,7 @@
                     <div class="text-[9px] text-gray-500 uppercase tracking-wider">Cenário Ativo</div>
                     <div id="currentScenarioName" class="text-xs text-white font-semibold">Aguardando...</div>
                 </div>
-                <button onclick="window.forceMapSync()" class="bg-indigo-700 hover:bg-indigo-600 text-white rounded transition flex items-center gap-2 px-3 py-1.5 shadow" title="Forçar todos a olhar para a sua localização no mapa">
-                    <i class="fa-solid fa-crosshairs"></i> <span class="text-[10px] md:text-xs font-bold hidden md:block">Puxar Visão</span>
-                </button>
-                <button onclick="window.reopenBriefing()" class="bg-blue-700 hover:bg-blue-600 text-white rounded transition flex items-center gap-2 px-3 py-1.5 shadow" title="Ver Ordem de Operação">
+<button onclick="window.reopenBriefing()" class="bg-blue-700 hover:bg-blue-600 text-white rounded transition flex items-center gap-2 px-3 py-1.5 shadow" title="Ver Ordem de Operação">
                     <i class="fas fa-clipboard-list"></i> <span class="text-[10px] md:text-xs font-bold hidden md:block">Briefing</span>
                 </button>
                 <button onclick="window.exitToMenu()" class="bg-red-700 hover:bg-red-600 text-white rounded transition flex items-center gap-2 px-3 py-1.5 shadow" title="Sair/Encerrar Simulação">
@@ -505,7 +502,7 @@
             <div class="p-6 overflow-y-auto flex-1 bg-gray-900">
                 <!-- Botão de Cenário Livre / Criação Própria em Destaque -->
                 <div class="mb-6">
-                    <button onclick="window.startScenario('livre')" class="w-full bg-gradient-to-r from-gray-800 to-gray-700 hover:from-ics-blue hover:to-blue-800 border-2 border-gray-600 hover:border-ics-blue p-5 rounded-xl transition-all shadow-lg text-left group">
+                    <button onclick="window.openCustomScenarioModal()" class="w-full bg-gradient-to-r from-gray-800 to-gray-700 hover:from-ics-blue hover:to-blue-800 border-2 border-gray-600 hover:border-ics-blue p-5 rounded-xl transition-all shadow-lg text-left group">
                         <div class="flex items-center">
                             <div class="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center border border-gray-500 group-hover:border-white mr-4">
                                 <i class="fa-solid fa-paint-roller text-2xl text-gray-400 group-hover:text-white transition"></i>
@@ -524,6 +521,43 @@
         </div>
     </div>
 
+
+    <!-- Modal Cenário Personalizado / Mesa Limpa -->
+    <div id="customScenarioModal" class="hidden fixed inset-0 z-[6500] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-ics-panel rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-gray-600 shadow-2xl">
+            <div class="p-5 border-b border-gray-700 flex justify-between items-center bg-gray-800">
+                <h2 class="text-xl font-bold text-white"><i class="fa-solid fa-pen-to-square text-ics-amber mr-2"></i>Criar História do Simulado</h2>
+                <button onclick="window.closeCustomScenarioModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto flex-1 bg-gray-900 space-y-4">
+                <p class="text-xs text-gray-400 leading-relaxed">
+                    Antes de abrir o mapa, escreva o contexto do estudo de caso. Essa história aparecerá na Ordem de Operação para orientar os participantes.
+                </p>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold mb-1 block">Título do Cenário</label>
+                    <input id="customScenarioTitle" type="text" value="Cenário Personalizado" class="w-full bg-gray-950 border border-gray-600 rounded px-3 py-2 text-sm text-white outline-none focus:border-ics-amber">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold mb-1 block">História / Contexto Inicial</label>
+                    <textarea id="customScenarioStory" rows="8" class="w-full bg-gray-950 border border-gray-600 rounded px-3 py-2 text-sm text-white outline-none focus:border-ics-amber" placeholder="Ex: Às 09h40, a central recebeu várias chamadas informando..."></textarea>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold mb-1 block">Objetivos Táticos</label>
+                    <textarea id="customScenarioObjectives" rows="4" class="w-full bg-gray-950 border border-gray-600 rounded px-3 py-2 text-sm text-white outline-none focus:border-ics-amber" placeholder="Um objetivo por linha. Ex: Estabelecer Posto de Comando&#10;Definir zonas quente, morna e fria"></textarea>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 uppercase font-bold mb-1 block">Perguntas para Discussão</label>
+                    <textarea id="customScenarioQuestions" rows="4" class="w-full bg-gray-950 border border-gray-600 rounded px-3 py-2 text-sm text-white outline-none focus:border-ics-amber" placeholder="Uma pergunta por linha. Ex: Onde deve ser instalado o Posto de Comando?"></textarea>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-700 bg-gray-800 flex gap-2">
+                <button onclick="window.closeCustomScenarioModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded text-sm">Cancelar</button>
+                <button onclick="window.startCustomScenarioFromForm()" class="flex-1 bg-ics-amber hover:bg-amber-600 text-black font-bold py-3 rounded text-sm">Iniciar com Briefing</button>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Modal Ordem de Operação (Briefing) -->
     <div id="briefingModal" class="hidden fixed inset-0 z-[7000] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-ics-panel rounded-xl max-w-2xl w-full border-l-4 border-ics-amber shadow-2xl flex flex-col overflow-hidden">
@@ -532,10 +566,14 @@
                 <div><h2 class="text-xl font-bold text-white tracking-wider">ORDEM DE OPERAÇÃO (BRIEFING)</h2><h3 id="briefingTitle" class="text-sm text-gray-400 font-mono uppercase"></h3></div>
             </div>
             <div class="p-6 bg-gray-900">
-                <h4 class="text-ics-blue font-bold mb-2 text-sm uppercase">Situação Atual</h4>
-                <div class="bg-gray-800 p-4 rounded border border-gray-700 mb-6"><p id="briefingDescription" class="text-sm text-gray-200 leading-relaxed"></p></div>
+                <h4 class="text-ics-blue font-bold mb-2 text-sm uppercase">História / Contexto Inicial</h4>
+                <div class="bg-gray-800 p-4 rounded border border-gray-700 mb-4 max-h-[32vh] overflow-y-auto no-scrollbar">
+                    <p id="briefingDescription" class="text-sm text-gray-200 leading-relaxed whitespace-pre-line"></p>
+                </div>
                 <h4 class="text-ics-amber font-bold mb-2 text-sm uppercase">Objetivos Táticos Prioritários</h4>
-                <ul id="briefingObjectives" class="list-none space-y-2 mb-6 text-sm text-gray-300"></ul>
+                <ul id="briefingObjectives" class="list-none space-y-2 mb-4 text-sm text-gray-300"></ul>
+                <h4 class="text-sky-400 font-bold mb-2 text-sm uppercase">Perguntas para Discussão</h4>
+                <ul id="briefingQuestions" class="list-none space-y-2 mb-6 text-sm text-gray-300"></ul>
                 <button onclick="document.getElementById('briefingModal').classList.add('hidden')" class="w-full bg-ics-amber hover:bg-amber-600 text-black font-bold py-4 rounded-lg transition-colors uppercase tracking-wider text-sm shadow-[0_0_15px_rgba(217,119,6,0.3)]">Compreendido - Iniciar Operações</button>
             </div>
         </div>
@@ -770,6 +808,104 @@
             }
         ];
 
+
+        const briefingExtras = {
+            ultracargo: {
+                story: `Às 14h35, a central de emergência recebeu múltiplas chamadas informando uma explosão seguida de incêndio em um terminal de armazenamento de líquidos inflamáveis. A coluna de fumaça é visível a quilômetros e equipes internas relatam calor radiante intenso nas áreas próximas aos tanques.
+
+Funcionários informam que havia manutenção em andamento no momento da ocorrência e que ainda há trabalhadores sem confirmação de saída. O fogo ameaça estruturas vizinhas e há risco de propagação para tanques próximos. A população no entorno começa a registrar imagens e há pressão externa por informações.
+
+A equipe de resposta deve assumir o comando, avaliar o vento, definir isolamento, estabelecer zonas de segurança e organizar a estratégia de controle antes de qualquer aproximação operacional.`,
+                questions: ['Onde instalar o Posto de Comando com segurança?', 'Qual deve ser a primeira zona quente?', 'O vento exige evacuação ou isolamento adicional?', 'Quais recursos devem ser priorizados para resfriamento e espuma?', 'Que informações precisam ser confirmadas antes do ataque?']
+            },
+            rodovia_hazmat: {
+                story: `Durante o horário de maior fluxo, a central recebe informação de colisão envolvendo veículo de passeio e caminhão transportando produto perigoso. Há vazamento ativo e relatos de odor forte no local. Motoristas abandonaram veículos próximos e há vítimas aguardando atendimento.
+
+A carga informada é compatível com risco químico, podendo gerar nuvem tóxica conforme a direção do vento. A primeira equipe percebe que curiosos se aproximam e que a rodovia permanece parcialmente ocupada por veículos.
+
+A prioridade é reconhecer o produto, proteger a equipe, isolar a área, considerar barlavento/sotavento e organizar atendimento às vítimas sem expor os respondedores.`,
+                questions: ['Qual lado é mais seguro para aproximação considerando o vento?', 'Qual isolamento inicial deve ser adotado?', 'Como organizar descontaminação?', 'Quais equipes devem entrar na zona quente?', 'Quando liberar atendimento direto às vítimas?']
+            },
+            aeroporto: {
+                story: `A torre informa que uma aeronave declarou emergência e saiu da área pavimentada após pouso crítico. Há fumaça saindo da fuselagem e relatos de passageiros feridos. Parte da tripulação iniciou evacuação, mas há desorganização e risco de incêndio secundário.
+
+Equipes de emergência são acionadas para resposta imediata. Existe possibilidade de múltiplas vítimas, pânico, combustível derramado e necessidade de controle rápido da cena.
+
+Os participantes devem organizar o comando, definir prioridades entre combate ao incêndio, salvamento, triagem, rotas de ambulância e preservação da área para investigação posterior.`,
+                questions: ['Qual a prioridade nos primeiros minutos?', 'Onde posicionar triagem e ambulâncias?', 'Como separar zona quente, morna e fria?', 'Quais riscos a aeronave ainda oferece?', 'Como controlar acesso de curiosos e imprensa?']
+            },
+            florestal: {
+                story: `Após período seco e ventos constantes, moradores relatam foco de incêndio em vegetação se aproximando de residências. A fumaça reduz visibilidade em vias próximas e há preocupação com idosos, crianças e animais em áreas vulneráveis.
+
+O fogo avança de forma irregular, influenciado pelo relevo e pelo vento. Há risco de mudança de direção, salto de fagulhas e comprometimento de estruturas.
+
+A equipe deve avaliar interface urbano-florestal, definir setores, priorizar proteção de vidas e estruturas, além de planejar evacuação preventiva.`,
+                questions: ['Quais áreas devem ser evacuadas primeiro?', 'Como o vento muda a estratégia?', 'Onde posicionar recursos sem bloquear rotas?', 'Que estruturas precisam de proteção imediata?', 'Como dividir os setores de combate?']
+            },
+            colapso: {
+                story: `Um edifício comercial apresenta colapso parcial após forte ruído estrutural relatado por testemunhas. Há poeira, pessoas feridas na via pública e possibilidade de vítimas presas em áreas instáveis. Moradores informam cheiro de gás e fios expostos.
+
+A cena é dinâmica e apresenta risco de novo colapso. Curiosos se aproximam, familiares procuram desaparecidos e o trânsito impede chegada de recursos especializados.
+
+Antes de qualquer entrada, a equipe deve estabilizar o perímetro, controlar riscos secundários, organizar busca e salvamento e manter registro claro das decisões.`,
+                questions: ['Qual perímetro inicial deve ser adotado?', 'Quem pode entrar na zona quente?', 'Como controlar risco de novo colapso?', 'Quais serviços devem ser acionados imediatamente?', 'Como organizar informações sobre desaparecidos?']
+            }
+        };
+
+        function enhanceScenarioBriefings() {
+            if (!Array.isArray(baseScenarios) || window.__briefingsEnhanced) return;
+            baseScenarios.forEach(s => {
+                const extra = briefingExtras[s.id];
+                if (!extra) return;
+                s.description = `${extra.story}
+
+SITUAÇÃO ATUAL:
+${s.description}
+
+OBJETIVOS DO EXERCÍCIO:
+Os participantes devem ler o contexto, discutir prioridades e somente depois avançar para o mapa tático.`;
+                s.questions = extra.questions;
+            });
+            window.__briefingsEnhanced = true;
+        }
+        enhanceScenarioBriefings();
+
+        window.openCustomScenarioModal = function() {
+            const modal = document.getElementById('customScenarioModal');
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeCustomScenarioModal = function() {
+            const modal = document.getElementById('customScenarioModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.startCustomScenarioFromForm = function() {
+            const title = (document.getElementById('customScenarioTitle')?.value || 'Cenário Personalizado').trim();
+            const story = (document.getElementById('customScenarioStory')?.value || '').trim();
+            const objectivesRaw = (document.getElementById('customScenarioObjectives')?.value || '').trim();
+            const questionsRaw = (document.getElementById('customScenarioQuestions')?.value || '').trim();
+
+            if (!story) {
+                window.showSimpleToast('Escreva a história do cenário antes de iniciar.');
+                return;
+            }
+
+            window.customScenarioDraft = {
+                title,
+                description: `${story}
+
+SITUAÇÃO INICIAL:
+Cenário criado pelo organizador para simulado de mesa. Utilize o mapa para posicionar riscos, recursos e zonas conforme a evolução do exercício.`,
+                objectives: objectivesRaw ? objectivesRaw.split('\n').map(x => x.trim()).filter(Boolean) : ['Estabelecer Posto de Comando', 'Definir zonas quente, morna e fria', 'Registrar decisões no Log de Operações'],
+                questions: questionsRaw ? questionsRaw.split('\n').map(x => x.trim()).filter(Boolean) : ['Qual é a prioridade inicial?', 'Onde posicionar o Posto de Comando?', 'Quais riscos secundários devem ser considerados?']
+            };
+
+            window.closeCustomScenarioModal();
+            window.startScenario('livre');
+        };
+
+
         // --- MÉTODOS DE MAPA E UI ---
         function getDifficultyColor(d) { return d==='Extremo'?'bg-red-600':d==='Alto'?'bg-orange-600':'bg-yellow-600'; }
 
@@ -821,11 +957,19 @@
 
             const s = id === 'livre' ? { title: 'Modo Livre', description: 'Modo livre para construção de estudo de caso pelo organizador. Antes de inserir os elementos no mapa, apresente aos participantes o contexto, local, horário, condições climáticas, riscos envolvidos, vítimas prováveis, recursos disponíveis e objetivos do exercício. Depois da narrativa inicial, use o mapa para posicionar ameaças, zonas e recursos, permitindo que o grupo tome decisões progressivas durante o simulado de mesa.', lat: -23.5505, lng: -46.6333, zoom: 15, windDeg: 0, windLabel: 'Norte (N)', objectives: [], elements: [] } : baseScenarios.find(x => x.id === id);
             
+            const localInitialElements = {};
+            if (s.elements && s.elements.length > 0) {
+                s.elements.forEach((el, index) => {
+                    const elId = `init_${index}_${Date.now()}`;
+                    localInitialElements[elId] = { type: el.type, lat: s.lat + el.latOffset, lng: s.lng + el.lngOffset, scale: el.scale || 1, product: el.product||"" };
+                });
+            }
+
             if(isFirebaseActive) {
                 if(authReadyPromise) await authReadyPromise;
                 const safeCode = code;
                 const initialPayload = {
-                    createdAt: Date.now(), scenarioTitle: s.title, description: s.description, objectives: s.objectives,
+                    createdAt: Date.now(), scenarioTitle: s.title, description: s.description, objectives: s.objectives, questions: s.questions || [],
                     mapCenter: {lat: s.lat, lng: s.lng, zoom: s.zoom || 16}, mapSyncTrigger: Date.now(),
                     windDeg: s.windDeg, windLabel: s.windLabel, windVisual: true,
                     zones: {hot:null, warm:null, cold:null}, elements: {}, communications: []
@@ -845,11 +989,11 @@
                     initLocalFallback(initialPayload);
                 }
             } else {
-                initLocalFallback({ scenarioTitle: s.title, windDeg: s.windDeg, windLabel: s.windLabel, mapCenter: {lat: s.lat, lng: s.lng, zoom: 16}, elements: {}, communications: [], zones: {hot:null, warm:null, cold:null} });
+                initLocalFallback({ scenarioTitle: s.title, description: s.description, objectives: s.objectives || [], questions: s.questions || [], windDeg: s.windDeg, windLabel: s.windLabel, mapCenter: {lat: s.lat, lng: s.lng, zoom: 16}, elements: localInitialElements, communications: [], zones: {hot:null, warm:null, cold:null} });
             }
 
             addLocalComm('SISTEMA', 'REDE GERAL', `Terminal Operador [${window.userName}] criou a sala ${code} com cenário: ${s.title}`, 'system');
-            window.showBriefing(s.title, s.description, s.objectives || []);
+            window.showBriefing(s.title, s.description, s.objectives || [], s.questions || []);
         };
 
         window.joinRoomFlow = async function() {
@@ -908,7 +1052,10 @@
                             let scale = parseFloat(document.getElementById('global-item-scale')?.value || 1);
                             if (isNaN(scale)) scale = 1; 
                             const prod = document.getElementById('hazmat-product')?.value || "";
-                            pushUpdateToDB({ [`elements.${id}`]: { type: window.placementMode, lat: e.latlng.lat, lng: e.latlng.lng, scale, product: prod } });
+                            const placedType = window.placementMode;
+                            pushUpdateToDB({ [`elements.${id}`]: { type: placedType, lat: e.latlng.lat, lng: e.latlng.lng, scale, product: prod } });
+                            const labelMap = { fire: 'Fogo', smoke: 'Fumo', hazmat: 'Produto perigoso', plane: 'Aeronave', car: 'Veículo acidentado', train: 'Trem/Carga', building: 'Edificação/Indústria', auto_bomba: 'Auto Bomba', foam: 'Carreta LGE', ship: 'Navio Bomba', amb: 'Ambulância', hazmat_team: 'Equipe Hazmat', pc: 'Posto de Comando', e: 'Área de Espera', h: 'Heliponto' };
+                            addLocalComm('SISTEMA', window.userName, `Item adicionado ao mapa: ${labelMap[placedType] || placedType}${placedType === 'hazmat' && prod ? ' - ' + prod : ''}.`, 'system');
                             // Não limpa o mode, permite clicar de novo. Right click cancels it.
                         }
                     }
@@ -962,7 +1109,7 @@
             }
 
             if (!window.studentHasSeenBriefing && data.scenarioTitle && data.scenarioTitle !== 'Modo Livre') {
-                window.showBriefing(data.scenarioTitle, data.description, data.objectives);
+                window.showBriefing(data.scenarioTitle, data.description, data.objectives, data.questions || []);
                 window.studentHasSeenBriefing = true;
             }
 
@@ -1140,22 +1287,27 @@
         }
 
         function addLocalComm(from, to, message, type = 'normal') {
-            const time = new Date().toLocaleTimeString('pt-PT', {hour12: false});
-            pushUpdateToDB({ communications: arrayUnion({from, to, message, type, time}) });
-            if((!isFirebaseActive || !currentUser) && window.currentDbState) {
-               if(!window.currentDbState.communications) window.currentDbState.communications = [];
-               window.currentDbState.communications.push({from, to, message, type, time}); applyRemoteState(window.currentDbState);
+            const entry = { time: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}), from, to, text, type };
+            const current = (window.currentDbState && Array.isArray(window.currentDbState.communications)) ? window.currentDbState.communications : [];
+            pushUpdateToDB({ communications: [...current, entry] });
+            if(!isFirebaseActive) {
+                renderChatMessage(entry);
+                renderedComms = Math.max(renderedComms, current.length + 1);
             }
+        }
         }
 
         window.sendMessage = function() {
-            const msg = document.getElementById('messageInput').value.trim(); if(!msg) return;
-            addLocalComm(`${window.userName} [${window.userRole}]`, 'REDE', msg, 'normal');
-            document.getElementById('messageInput').value = '';
+            const input = document.getElementById('messageInput');
+            const msg = input ? input.value.trim() : '';
+            if(!msg) return;
+            addLocalComm(window.userName || 'Operador', 'LOG', msg, 'user');
+            input.value = '';
         };
 
         window.enableZonePlacement = function(type, btn) {
             window.placementMode = type; window.map.getContainer().style.cursor = 'crosshair';
+                if (window.innerWidth <= 768) window.closeAllSidebars();
             document.querySelectorAll('.btn-zone, .btn-map-tool, .res-btn').forEach(b => b.classList.remove('ring-2', 'ring-white', 'bg-ics-blue', 'border-white'));
             btn.classList.add('ring-2', 'ring-white', 'bg-ics-blue');
             if (window.innerWidth <= 768) setTimeout(() => window.closeAllSidebars(), 80);
@@ -1203,9 +1355,15 @@
             } catch (e) { window.showSimpleToast("Erro ao buscar local."); }
         };
 
-        window.showBriefing = function(title, desc, objs) {
-            document.getElementById('briefingTitle').innerText = title; document.getElementById('briefingDescription').innerText = desc;
-            document.getElementById('briefingObjectives').innerHTML = (objs||[]).map(o => `<li class="flex items-start gap-2 text-gray-300"><i class="fa-solid fa-crosshairs text-ics-blue mt-1 text-[10px]"></i><span>${o}</span></li>`).join('');
+        window.showBriefing = function(title, description, objectives = [], questions = []) {
+            document.getElementById('briefingTitle').innerText = title || 'Cenário';
+            document.getElementById('briefingDescription').innerText = description || 'Sem descrição disponível.';
+            const objList = document.getElementById('briefingObjectives');
+            objList.innerHTML = (objectives && objectives.length ? objectives : ['Avaliar a cena', 'Definir prioridades', 'Registrar decisões no Log de Operações']).map(o => `<li class="flex gap-2"><i class="fa-solid fa-check text-ics-amber mt-1"></i><span>${escapeHtml(o)}</span></li>`).join('');
+            const qList = document.getElementById('briefingQuestions');
+            if (qList) {
+                qList.innerHTML = (questions && questions.length ? questions : ['Qual é a prioridade inicial?', 'Onde instalar o Posto de Comando?', 'Quais riscos secundários precisam ser controlados?']).map(q => `<li class="flex gap-2"><i class="fa-solid fa-circle-question text-sky-400 mt-1"></i><span>${escapeHtml(q)}</span></li>`).join('');
+            }
             document.getElementById('briefingModal').classList.remove('hidden');
         };
         window.reopenBriefing = function() {
